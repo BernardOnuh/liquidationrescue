@@ -159,6 +159,9 @@ describe("LiquidationRescue", () => {
     const now = (await f.pub.getBlock()).timestamp;
     await v.write.configurePolicy([hf(1.25), hf(1.5), 150_000_000n, now + 1000n]);
     expect((await f.vault.read.getPolicy([f.alice.account.address])).spent).to.equal(usd(150), "reconfiguring doesn't reset spend");
+    await v.write.revokePolicy();
+    await v.write.configurePolicy([hf(1.25), hf(1.5), usd(150), now + 1000n]);
+    expect((await f.vault.read.getPolicy([f.alice.account.address])).spent).to.equal(usd(150), "nor does revoking first");
   });
 
   it("paused, expired and revoked policies spend nothing", async () => {

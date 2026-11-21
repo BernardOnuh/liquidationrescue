@@ -95,9 +95,9 @@ contract ProtectionVault is AbstractCallback, ReentrancyGuard {
         if (maxSpend == 0) revert InvalidPolicy("max spend is zero");
         if (expiry <= block.timestamp) revert InvalidPolicy("expiry is in the past");
         Policy storage p = _policies[msg.sender];
-        // Reconfiguring keeps what was already spent, so a new policy can't reset the lifetime cap.
-        uint256 spent = p.active ? p.spent : 0;
-        _policies[msg.sender] = Policy(triggerHF, targetHF, maxSpend, spent, expiry, false, true);
+        // Reconfiguring (even after revoking) keeps what was already spent, so the lifetime cap can't be reset;
+        // raise maxSpend to allow more.
+        _policies[msg.sender] = Policy(triggerHF, targetHF, maxSpend, p.spent, expiry, false, true);
         emit PolicyConfigured(msg.sender, triggerHF, targetHF, maxSpend, expiry);
     }
 
@@ -108,7 +108,9 @@ contract ProtectionVault is AbstractCallback, ReentrancyGuard {
     }
 
     function revokePolicy() external {
-        delete _policies[msg.sender];
+        Policy storage p = _policies[msg.sender];
+        p.active = false;
+        p.paused = false;
         emit PolicyRevoked(msg.sender);
     }
 
