@@ -1,0 +1,32 @@
+{
+  "network": "local",
+  "simulated": true,
+  "origin": {
+    "chainId": 31337,
+    "rpc": "http://127.0.0.1:8546",
+    "name": "Local chain",
+    "explorer": ""
+  },
+  "reactive": {
+    "chainId": 31337,
+    "rpc": "http://127.0.0.1:8546",
+    "name": "Local chain (Reactive simulated)",
+    "explorer": ""
+  },
+  "weth": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+  "usdc": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+  "oracle": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+  "market": "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707",
+  "adapter": "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853",
+  "reactiveContract": "0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6",
+  "vault": "0x610178da211fef7d417bc0e6fed39f05609ad788",
+  "callbackProxy": "0x8a791620dd6260079bf849dc5567adc3f2fdc318",
+  "originFromBlock": 0,
+  "reactiveFromBlock": 0,
+  "priceOperator": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "devAccounts": [
+    "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+  ]
+}

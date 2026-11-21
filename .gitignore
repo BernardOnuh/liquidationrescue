@@ -5,3 +5,6 @@ contracts/typechain-types/
 .env
 *.env
 .next/
+web/.next/
+web/next-env.d.ts
+shots/

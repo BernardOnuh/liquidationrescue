@@ -33,7 +33,8 @@ contract LiquidationRescueReactive is AbstractReactive {
     event VaultSet(address indexed vault);
     event UserProtected(address indexed user);
     event UserUnprotected(address indexed user);
-    event RescueRequested(bytes32 indexed eventId, address indexed user, uint256 price, uint256 previousPrice);
+    /// @param originTxHash The origin-chain transaction that carried the price drop, so each rescue can be traced across chains.
+    event RescueRequested(bytes32 indexed eventId, address indexed user, uint256 price, uint256 previousPrice, uint256 originTxHash);
     event PriceIgnored(uint256 price, uint256 previousPrice);
 
     error NotOwner();
@@ -78,7 +79,7 @@ contract LiquidationRescueReactive is AbstractReactive {
                 // Unique per origin log and user: the vault refuses to process the same id twice.
                 bytes32 eventId = keccak256(abi.encode(log_.chainId, log_.txHash, log_.logIndex, user));
                 _requestRescue(eventId, user, price);
-                emit RescueRequested(eventId, user, price, previous);
+                emit RescueRequested(eventId, user, price, previous, log_.txHash);
             }
             return;
         }

@@ -1,0 +1,10 @@
+{
+  "network": "testnet",
+  "simulated": false,
+  "origin": { "chainId": 84532, "rpc": "https://sepolia.base.org", "name": "Base Sepolia", "explorer": "https://sepolia.basescan.org" },
+  "reactive": { "chainId": 5318007, "rpc": "https://lasna-rpc.rnk.dev/", "name": "Reactive Lasna", "explorer": "https://lasna.reactscan.net" },
+  "weth": null, "usdc": null, "oracle": null, "market": null, "adapter": null,
+  "reactiveContract": null, "vault": null, "callbackProxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
+  "originFromBlock": 0, "reactiveFromBlock": 0,
+  "priceOperator": null, "devAccounts": []
+}

@@ -6,21 +6,35 @@
 //   4. npx hardhat run scripts/deploy.ts --network lasna         (STEP=link)     setVault
 // Keys come from DESTINATION_PRIVATE_KEY / REACTIVE_PRIVATE_KEY. Use dedicated testnet wallets only.
 import hre from "hardhat";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseEther, type Hex } from "viem";
 
 const FILE = "deployments.json";
 const BASE_SEPOLIA_CALLBACK_PROXY = "0x476F44b11F5C942c58f4c8E3d0300E5710743585"; // Reactive docs, origins & destinations
 const MAX_PRICE_AGE = 3600n;
 
-const d: Record<string, Hex | string> = existsSync(FILE) ? JSON.parse(readFileSync(FILE, "utf8")) : {};
-const save = () => writeFileSync(FILE, JSON.stringify(d, null, 2) + "\n");
+const d: Record<string, string> = existsSync(FILE) ? JSON.parse(readFileSync(FILE, "utf8")) : {};
+const save = () => {
+  writeFileSync(FILE, JSON.stringify(d, null, 2) + "\n");
+  // The dashboard's testnet configuration, in the same shape as local.json.
+  mkdirSync("../web/src/deployments", { recursive: true });
+  writeFileSync("../web/src/deployments/testnet.json", JSON.stringify({
+    network: "testnet", simulated: false,
+    origin: { chainId: Number(d.originChainId ?? 84532), rpc: "https://sepolia.base.org", name: "Base Sepolia", explorer: "https://sepolia.basescan.org" },
+    reactive: { chainId: 5318007, rpc: "https://lasna-rpc.rnk.dev/", name: "Reactive Lasna", explorer: "https://lasna.reactscan.net" },
+    weth: d.weth, usdc: d.usdc, oracle: d.oracle, market: d.market, adapter: d.adapter,
+    reactiveContract: d.reactive, vault: d.vault, callbackProxy: BASE_SEPOLIA_CALLBACK_PROXY,
+    originFromBlock: Number(d.originBlock ?? 0), reactiveFromBlock: Number(d.reactiveBlock ?? 0),
+    priceOperator: d.priceOperator, devAccounts: [],
+  }, null, 2) + "\n");
+};
 const need = (k: string) => { if (!d[k]) throw new Error(`${k} missing from ${FILE}: run the earlier step first`); return d[k] as Hex; };
 
 async function main() {
   const step = process.env.STEP;
   const [me] = await hre.viem.getWalletClients();
   console.log(`step ${step} on ${hre.network.name} from ${me.account.address}`);
+  const block = Number(await (await hre.viem.getPublicClient()).getBlockNumber());
   if (step === "origin") {
     const weth = await hre.viem.deployContract("MockERC20", ["Test WETH", "tWETH", 18]);
     const usdc = await hre.viem.deployContract("MockERC20", ["Test USDC", "tUSDC", 6]);
@@ -29,12 +43,13 @@ async function main() {
     const market = await hre.viem.deployContract("MockLendingMarket", [weth.address, usdc.address, oracle.address]);
     await usdc.write.mint([market.address, 1_000_000n * 10n ** 6n]);
     const adapter = await hre.viem.deployContract("MockMarketAdapter", [market.address]);
-    Object.assign(d, { originChainId: String(hre.network.config.chainId), weth: weth.address, usdc: usdc.address, oracle: oracle.address, market: market.address, adapter: adapter.address });
+    Object.assign(d, { originChainId: String(hre.network.config.chainId), weth: weth.address, usdc: usdc.address, oracle: oracle.address, market: market.address, adapter: adapter.address, originBlock: String(block), priceOperator: me.account.address });
   } else if (step === "reactive") {
     const reactive = await hre.viem.deployContract("LiquidationRescueReactive",
       [me.account.address, BigInt(need("originChainId")), need("oracle"), need("weth")],
       { value: parseEther(process.env.REACTIVE_FUNDING ?? "1") }); // REACT, pays for reactive transactions
     d.reactive = reactive.address;
+    d.reactiveBlock = String(block);
   } else if (step === "vault") {
     const vault = await hre.viem.deployContract("ProtectionVault",
       [BASE_SEPOLIA_CALLBACK_PROXY, need("reactive"), need("adapter"), MAX_PRICE_AGE],

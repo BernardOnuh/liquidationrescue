@@ -4,17 +4,17 @@ pragma solidity ^0.8.29;
 // Test-only stand-ins for Reactive Network infrastructure, behaving as its docs describe. Never deployed.
 import {ISystemContract} from "../lib/reactive-lib-omni/interfaces/ISystemContract.sol";
 
-/// @notice Placed at 0x8888…8888 in tests (the address AbstractReactive hardcodes). Records subscriptions and
-/// callback requests instead of delivering them; the tests deliver them through MockCallbackProxy.
+/// @notice Placed at 0x8888…8888 in tests and the local demo chain (the address AbstractReactive hardcodes). Records
+/// subscriptions and callback requests instead of delivering them; the tests and scripts/local-relayer.ts deliver them.
 contract MockSystemContract {
-    struct Sub { uint256 chainId; address contract_; uint256 topic0; uint256 topic1; uint256 topic2; uint256 topic3; }
+    struct Sub { uint256 chainId; address contract_; uint256 topic0; uint256 topic1; uint256 topic2; uint256 topic3; address subscriber; }
     Sub[] public subscriptions;
 
     event Subscribed(uint256 chainId, address contract_, uint256 topic0, uint256 topic1);
     event CallbackRequest(uint256 indexed chainId, address indexed sender, address indexed recipient, uint64 gasLimit, bytes payload);
 
     function subscribe(uint256 chainId_, address contract_, uint256 t0, uint256 t1, uint256 t2, uint256 t3) external {
-        subscriptions.push(Sub(chainId_, contract_, t0, t1, t2, t3));
+        subscriptions.push(Sub(chainId_, contract_, t0, t1, t2, t3, msg.sender));
         emit Subscribed(chainId_, contract_, t0, t1);
     }
 

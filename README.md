@@ -56,6 +56,23 @@ cd contracts && npm install && npx hardhat test
 
 Locally, Reactive Network is played by two test stand-ins (`contracts/contracts/test/ReactiveStandIns.sol`): one at the system contract address records subscriptions and callback requests, and one delivers callbacks the way the docs describe the proxy (it overwrites the first argument with the requesting reactive contract). Real logs from real transactions are fed to `react()`. These stand-ins are for tests only; the testnet deployment uses the real network.
 
+## Dashboard
+
+```bash
+# Local demo (Reactive Network simulated by a local relayer; clearly labelled in the UI)
+cd contracts && npx hardhat node --hostname 127.0.0.1 --port 8546      # terminal 1
+npx hardhat run scripts/dev-local.ts --network local                   # writes web/src/deployments/local.json
+npx hardhat run scripts/local-relayer.ts --network local               # terminal 2
+cd ../web && npm install && npm run dev                                # http://127.0.0.1:3200
+
+node scripts/e2e.mjs http://127.0.0.1:3200 ./shots                     # browser e2e (E2E_WIDTH=390 for phone size)
+
+# Against the testnet deployment (after the deploy steps below)
+NEXT_PUBLIC_NETWORK=testnet npm run dev
+```
+
+On the local chain the wallet menu offers test accounts: two borrowers and the price feed operator, who can publish price moves. Each rescue in the log links its three hops: the price event, the Reactive transaction that requested the callback, and the callback on the vault.
+
 ## Deploy (testnet)
 
 Needs a testnet wallet with Base Sepolia ETH and Lasna REACT (Reactive's faucet: send Sepolia ETH to `0x9b9BB25f1A81078C544C829c5EB7822d747Cf434`, 100 REACT per 1 SepETH, at most 5 SepETH per transaction).
@@ -70,7 +87,7 @@ STEP=vault    npx hardhat run scripts/deploy.ts --network baseSepolia
 STEP=link     npx hardhat run scripts/deploy.ts --network lasna
 ```
 
-Addresses go into `contracts/deployments.json`. Base Sepolia's callback proxy (`0x476F…3585`) and Lasna's chain ID (5318007) come from Reactive's docs.
+Addresses go into `contracts/deployments.json` and `web/src/deployments/testnet.json`. Base Sepolia's callback proxy (`0x476F…3585`) and Lasna's chain ID (5318007) come from Reactive's docs.
 
 ## Status
 
@@ -78,5 +95,5 @@ Addresses go into `contracts/deployments.json`. Base Sepolia's callback proxy (`
 |---|---|
 | Contracts and tests | Done, 14/14 passing locally |
 | Testnet deployment and real origin → Reactive → callback transaction hashes | Waiting for a funded testnet wallet |
-| Dashboard | Next |
+| Dashboard (`web/`) | Done: position and health-factor gauge, policy and reserve controls, rescue preview, price feed, cross-chain rescue log. Browser e2e passes at desktop and phone width |
 | Demo video | After deployment |
