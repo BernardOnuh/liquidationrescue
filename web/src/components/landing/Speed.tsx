@@ -41,8 +41,8 @@ export function Speed({ latency }: { latency: LatencySummary | null }) {
     <section id="speed" className="relative py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <Eyebrow>Speed is our advantage</Eyebrow>
-        <h2 className="section-title max-w-3xl">Seconds aren&apos;t just numbers. They&apos;re your collateral.</h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">A keeper that polls every few seconds can't see a crash until its next check, so it adds up to one polling interval before it even starts. An event-driven rescue starts from the price event itself.</p>
+        <h2 className="section-title reveal max-w-3xl">Seconds aren&apos;t just numbers. They&apos;re your collateral.</h2>
+        <p className="reveal mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">A keeper that polls every few seconds can't see a crash until its next check, so it adds up to one polling interval before it even starts. An event-driven rescue starts from the price event itself.</p>
 
         <div className="mt-10 grid overflow-hidden rounded-[32px] border border-white/10 md:grid-cols-2">
           <Lane title="Polling keeper" sub={`checks every ${interval} s`} tone="orange">

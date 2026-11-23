@@ -12,7 +12,16 @@ import { Magnetic } from "./Magnetic";
 const REPO = "https://github.com/BernardOnuh/liquidationrescue";
 
 export function Landing({ latency }: { latency: LatencySummary | null }) {
-  useEffect(() => { gsap.registerPlugin(ScrollTrigger); }, []);
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+    const ctx = gsap.context(() => {
+      gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.utils.toArray<HTMLElement>(".reveal").forEach(el =>
+          gsap.from(el, { y: 26, autoAlpha: 0, duration: 0.9, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 90%", once: true } }));
+      });
+    });
+    return () => ctx.revert();
+  }, []);
   return (
     <div className="landing relative overflow-x-clip bg-[#04060d] text-text">
       <Nav />
@@ -144,9 +153,24 @@ function Problem() {
         if (bar.current) { bar.current.style.width = `${Math.min(100, Math.max(4, (h / 1.8) * 100))}%`; bar.current.style.background = h < 1 ? "#ff3b3b" : h < 1.2 ? "#ff3b3b" : "#22e39a"; }
         if (label.current) label.current.textContent = h < 1 ? "Liquidatable" : h < 1.2 ? "At risk" : "Healthy";
         root.current?.style.setProperty("--p", String(p));
+        // the live price tag that rides the newest candle
+        const m = root.current?.querySelector<SVGGElement>("#crash-marker");
+        if (m) {
+          m.setAttribute("transform", `translate(0 ${chartY(pr)})`);
+          m.querySelector("text")!.textContent = Math.round(pr).toLocaleString("en-US");
+          m.querySelector("rect")!.setAttribute("fill", pr < LIQ_PRICE ? "#ff3b3b" : "#e8ecf5");
+        }
+        root.current?.querySelector(".crash-card")?.classList.toggle("liq-hot", h < 1);
       };
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        ScrollTrigger.create({ trigger: root.current, start: "top top", end: "+=160%", pin: ".problem-stage", scrub: 0.6, onUpdate: s => draw(s.progress) });
+        // The crash plays by itself while the section is on screen: fall, hold on the liquidation, rewind, again.
+        const st = { p: 0 };
+        const tl = gsap.timeline({ repeat: -1, paused: true })
+          .to(st, { p: 1, duration: 7, ease: "power1.in", onUpdate: () => draw(st.p) })
+          .to({}, { duration: 2.4 })
+          .to(st, { p: 0, duration: 1.2, ease: "power2.inOut", onUpdate: () => draw(st.p) })
+          .to({}, { duration: 0.5 });
+        ScrollTrigger.create({ trigger: root.current, start: "top 75%", end: "bottom 20%", onToggle: s => (s.isActive ? tl.play() : tl.pause()) });
       });
       mm.add("(prefers-reduced-motion: reduce)", () => draw(1));
       draw(0);
@@ -155,15 +179,15 @@ function Problem() {
   }, []);
   return (
     <section id="problem" ref={root} className="relative" style={{ ["--p" as string]: 0 }}>
-      <div className="problem-stage relative flex min-h-[100svh] items-center overflow-hidden">
+      <div className="relative flex min-h-[100svh] items-center overflow-hidden py-24">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_30%_50%,rgb(255_59_59/0.22),transparent_70%)]" style={{ opacity: "var(--p)" }} />
         <div className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: "calc(var(--p) * 0.45)" }} />
         <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-5 sm:px-8 md:grid-cols-2">
           <CrashChart />
           <div>
             <Eyebrow>The problem · Liquidation never waits</Eyebrow>
-            <h2 className="section-title">One price drop.<br />Everything at risk.</h2>
-            <p className="mt-5 max-w-md text-[17px] leading-relaxed text-dim">When collateral prices fall, your borrowing position can move toward liquidation. Traditional monitoring depends on someone, or something, noticing the danger in time.</p>
+            <h2 className="section-title reveal">One price drop.<br />Everything at risk.</h2>
+            <p className="reveal mt-5 max-w-md text-[17px] leading-relaxed text-dim">When collateral prices fall, your borrowing position can move toward liquidation. Traditional monitoring depends on someone, or something, noticing the danger in time.</p>
             <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur">
               <div className="flex items-end justify-between">
                 <div><div className="text-[11px] uppercase tracking-[0.16em] text-dim">WETH price</div><span ref={price} className="font-mono text-[28px] font-medium">$3,200</span></div>
@@ -195,29 +219,36 @@ const CRASH = (() => {
   return out;
 })();
 const LIQ_PRICE = POS.debt / (POS.collateral * 0.8); // HF = 1 → $2,000
+const chartY = (v: number) => 380 - ((v - 1700) / (3400 - 1700)) * 340;
 
 function CrashChart() {
-  const lo = 1700, hi = 3400, Y = (v: number) => 380 - ((v - lo) / (hi - lo)) * 340, step = 18.2, w = 12;
+  const Y = chartY, step = 18.2, w = 12;
   return (
-    <div className="relative mx-auto w-full max-w-[520px] rounded-[28px] border border-white/10 bg-[#05070c]/80 p-3">
+    <div className="crash-card relative mx-auto w-full max-w-[520px] rounded-[28px] border border-white/10 bg-[#05070c]/80 p-3">
       <div className="flex items-center justify-between px-2 pb-2 pt-1 font-mono text-[11px] tracking-[0.12em] text-[#c3cad6]"><span>WETH / USD</span><span className="text-bear" style={{ opacity: "var(--p)" }}>▼ CRASH</span></div>
       <svg viewBox="0 0 500 400" className="w-full">
         {[3200, 2800, 2400, 2000].map(v => (
           <g key={v}><line x1="0" x2="452" y1={Y(v)} y2={Y(v)} stroke="rgb(255 255 255 / 0.06)" /><text x="496" y={Y(v) + 4} textAnchor="end" fill="#8c96ab" fontSize="11" fontFamily="JetBrains Mono, monospace">{v.toLocaleString("en-US")}</text></g>
         ))}
         <rect x="0" y={Y(LIQ_PRICE)} width="452" height={400 - Y(LIQ_PRICE)} fill="rgb(255 59 59 / 0.12)" style={{ opacity: "var(--p)" }} />
-        <line x1="0" x2="452" y1={Y(LIQ_PRICE)} y2={Y(LIQ_PRICE)} stroke="#ff3b3b" strokeDasharray="6 6" />
+        <line className="liq-line" x1="0" x2="452" y1={Y(LIQ_PRICE)} y2={Y(LIQ_PRICE)} stroke="#ff3b3b" strokeDasharray="6 6" />
         <text x="8" y={Y(LIQ_PRICE) + 18} fill="#ff3b3b" fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">LIQUIDATION · HF 1.00 · $2,000</text>
         {CRASH.map((k, i) => {
           const x = 16 + i * step, up = k.c >= k.o, col = up ? "#22e39a" : "#ff3b3b";
           return (
-            <g key={i} style={{ opacity: `clamp(0, calc(var(--p) * ${CRASH.length + 2} - ${i}), 1)` }}>
+            <g key={i} style={{ opacity: `clamp(0, calc(var(--p) * ${CRASH.length + 2} - ${i}), 1)`, transform: `translateY(calc((1 - clamp(0, calc(var(--p) * ${CRASH.length + 2} - ${i}), 1)) * -16px))` }}>
               <line x1={x} x2={x} y1={Y(k.h)} y2={Y(k.l)} stroke={col} strokeWidth="1.3" />
               <rect x={x - w / 2} y={Y(Math.max(k.o, k.c))} width={w} height={Math.max(2, Y(Math.min(k.o, k.c)) - Y(Math.max(k.o, k.c)))} fill={col} rx="1" />
             </g>
           );
         })}
+        <g id="crash-marker" transform={`translate(0 ${Y(POS.from)})`}>
+          <line x1="0" x2="452" stroke="rgb(255 255 255 / 0.45)" strokeDasharray="2 4" />
+          <rect x="452" y="-10" width="48" height="20" rx="5" fill="#e8ecf5" />
+          <text x="476" y="4" textAnchor="middle" fill="#05070c" fontSize="10.5" fontWeight="700" fontFamily="JetBrains Mono, monospace">3,200</text>
+        </g>
       </svg>
+      <div className="pointer-events-none absolute right-8 top-16 rounded-lg border-2 border-bear px-3 py-1 font-display text-[22px] font-bold tracking-[0.08em] text-bear" style={{ opacity: "clamp(0, calc((var(--p) - 0.9) * 14), 1)", transform: "rotate(-9deg) scale(calc(1.6 - clamp(0, calc((var(--p) - 0.9) * 14), 1) * 0.6))" }}>LIQUIDATED</div>
     </div>
   );
 }
@@ -226,24 +257,40 @@ function CrashChart() {
 function Solution() {
   const root = useRef<HTMLElement>(null);
   const [stage, setStage] = useState(0);
+  const [run, setRun] = useState(0);
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
       const p1 = root.current!.querySelector<SVGPathElement>("#hop1")!, p2 = root.current!.querySelector<SVGPathElement>("#hop2")!;
       const pulse = root.current!.querySelector<SVGCircleElement>("#pulse")!, halo = root.current!.querySelector<SVGCircleElement>("#pulse-halo")!;
       const L1 = p1.getTotalLength(), L2 = p2.getTotalLength();
+      const trail = Array.from(root.current!.querySelectorAll<SVGCircleElement>(".trail"));
+      const at = (p: number): [DOMPoint, string] => {
+        if (p < 0.3) return [p1.getPointAtLength(0), "#ff3b3b"];
+        if (p < 0.62) return [p1.getPointAtLength(((p - 0.3) / 0.32) * L1), p < 0.5 ? "#ff3b3b" : "#e8ecf5"];
+        return [p2.getPointAtLength(Math.min(1, (p - 0.62) / 0.3) * L2), "#22e39a"];
+      };
       const place = (p: number) => {
-        let pt: DOMPoint, col: string;
-        if (p < 0.3) { pt = p1.getPointAtLength(0); col = "#ff3b3b"; }
-        else if (p < 0.62) { pt = p1.getPointAtLength(((p - 0.3) / 0.32) * L1); col = p < 0.5 ? "#ff3b3b" : "#e8ecf5"; }
-        else { pt = p2.getPointAtLength(Math.min(1, (p - 0.62) / 0.3) * L2); col = "#22e39a"; }
+        const [pt, col] = at(p);
         for (const c of [pulse, halo]) { c.setAttribute("cx", String(pt.x)); c.setAttribute("cy", String(pt.y)); c.setAttribute("fill", col); }
+        const moving = (p > 0.3 && p < 0.62) || (p > 0.62 && p < 0.92);
+        trail.forEach((c, k) => {
+          const [tp] = at(Math.max(p > 0.62 ? 0.62 : 0.3, p - (k + 1) * 0.012));
+          c.setAttribute("cx", String(tp.x)); c.setAttribute("cy", String(tp.y)); c.setAttribute("fill", col);
+          c.setAttribute("opacity", moving ? String(0.55 - k * 0.1) : "0");
+        });
         setStage(p < 0.3 ? 0 : p < 0.62 ? 1 : 2);
-        root.current?.style.setProperty("--s", String(p));
       };
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        ScrollTrigger.create({ trigger: root.current, start: "top top", end: "+=200%", pin: ".solution-stage", scrub: 0.6, onUpdate: s => place(s.progress) });
+        // The signal travels on its own while the section is on screen, then the loop restarts.
+        const st = { p: 0 };
+        const tl = gsap.timeline({ repeat: -1, paused: true })
+          .call(() => setRun(r => r + 1))
+          .to(st, { p: 1, duration: 6.5, ease: "none", onUpdate: () => place(st.p) })
+          .to({}, { duration: 1.8 })
+          .call(() => { st.p = 0; place(0); });
+        ScrollTrigger.create({ trigger: root.current, start: "top 75%", end: "bottom 20%", onToggle: s => (s.isActive ? tl.play() : tl.pause()) });
       });
       mm.add("(prefers-reduced-motion: reduce)", () => place(1));
       place(0);
@@ -257,11 +304,11 @@ function Solution() {
   ];
   return (
     <section id="how" ref={root} className="relative">
-      <div className="solution-stage relative flex min-h-[100svh] flex-col justify-center overflow-hidden py-24">
+      <div className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden py-24">
         <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
           <Eyebrow>The solution · We react</Eyebrow>
-          <h2 className="section-title max-w-3xl">The moment risk appears, protection begins.</h2>
-          <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">LiquidationRescue uses Reactive Smart Contracts to respond to on-chain price events and initiate a calculated rescue, without relying on periodic polling.</p>
+          <h2 className="section-title reveal max-w-3xl">The moment risk appears, protection begins.</h2>
+          <p className="reveal mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">LiquidationRescue uses Reactive Smart Contracts to respond to on-chain price events and initiate a calculated rescue, without relying on periodic polling.</p>
           <svg viewBox="0 0 1200 300" className="mt-10 w-full">
             <defs>
               <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stopColor="#ff3b3b" /><stop offset="1" stopColor="#e8ecf5" /></linearGradient>
@@ -276,10 +323,19 @@ function Solution() {
             <Node x={190} chain="BASE SEPOLIA" title="Price feed" line="PriceUpdated event" tone="#ff3b3b" on={stage >= 0} />
             <Node x={600} chain="REACTIVE LASNA" title="react()" line="RescueRequested" tone="#e8ecf5" on={stage >= 1} />
             <Node x={1010} chain="BASE SEPOLIA" title="ProtectionVault" line="onRiskEvent → repay" tone="#22e39a" on={stage >= 2} />
+            {[0, 1, 2, 3, 4].map(k => <circle key={k} className="trail" r={5 - k * 0.7} opacity="0" />)}
             <circle id="pulse-halo" r="0" opacity="0" />
-            <circle id="pulse" r="6" />
+            <circle id="pulse" r="6.5" />
           </svg>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 rounded-2xl border border-white/10 bg-[#05070c]/80 px-5 py-4 font-mono text-[12.5px] leading-7">
+            {[["#ff3b3b", "base-sepolia", "PriceUpdated(WETH, ↓ price): the event is the trigger"], ["#e8ecf5", "lasna", "react() → RescueRequested(eventId, user) → callback"], ["#22e39a", "base-sepolia", "ProtectionVault.onRiskEvent → repay → HF back to target"]].map(([c, chain, msg], i) => (
+              <div key={`${run}-${i}`} className={`flex gap-3 transition-opacity duration-300 ${stage >= i ? "opacity-100" : "opacity-0"}`}>
+                <span style={{ color: c }}>{chain.padEnd(12, "\u00a0")}</span>
+                <span className={stage >= i ? "type-in text-[#c3cad6]" : "text-[#c3cad6]"} style={{ ["--chars" as string]: msg.length }}>{msg}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
             {stages.map((s, i) => (
               <div key={s.k} className={`rounded-3xl border p-5 transition-all duration-500 ${stage === i ? "border-bull/40 bg-bull/[0.06] shadow-[0_0_60px_-20px_rgb(34_227_154/0.6)]" : "border-white/10 bg-white/[0.02] opacity-60"}`}>
                 <div className="font-mono text-[12px] tracking-[0.2em]" style={{ color: ["#ff3b3b", "#e8ecf5", "#22e39a"][i] }}>0{i + 1} · {s.k}</div>
@@ -312,9 +368,15 @@ function Control() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>(".rule").forEach(el => {
-        ScrollTrigger.create({ trigger: el, start: "top 78%", onEnter: () => el.classList.add("rule-on"), onLeaveBack: () => el.classList.remove("rule-on") });
+      const rules = gsap.utils.toArray<HTMLElement>(".rule");
+      gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
+        // Each rule arms in turn, all hold, then the panel resets: on its own, while on screen.
+        const tl = gsap.timeline({ repeat: -1, paused: true });
+        rules.forEach((el, i) => tl.call(() => el.classList.add("rule-on"), [], 0.3 + i * 0.45));
+        tl.to({}, { duration: 2.6 }).call(() => rules.forEach(el => el.classList.remove("rule-on"))).to({}, { duration: 0.7 });
+        ScrollTrigger.create({ trigger: root.current, start: "top 75%", end: "bottom 20%", onToggle: s => (s.isActive ? tl.play() : tl.pause()) });
       });
+      gsap.matchMedia().add("(prefers-reduced-motion: reduce)", () => rules.forEach(el => el.classList.add("rule-on")));
     }, root);
     return () => ctx.revert();
   }, []);
@@ -332,8 +394,8 @@ function Control() {
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <Eyebrow>Protection with control</Eyebrow>
-          <h2 className="section-title">Automated protection.<br />Your rules.</h2>
-          <p className="mt-5 max-w-md text-[17px] leading-relaxed text-dim">Set your limits. Fund your reserve. Let the protocol react when the market moves against you.</p>
+          <h2 className="section-title reveal">Automated protection.<br />Your rules.</h2>
+          <p className="reveal mt-5 max-w-md text-[17px] leading-relaxed text-dim">Set your limits. Fund your reserve. Let the protocol react when the market moves against you.</p>
           <p className="mt-4 flex max-w-md items-start gap-2 text-[14px] text-dim"><Ban className="mt-0.5 h-4 w-4 shrink-0 text-bear" /> Stale prices are rejected, and the vault never spends beyond your budget or your reserve.</p>
         </div>
         <div className="vault relative rounded-[36px] p-[1px]">
@@ -367,8 +429,8 @@ function Final() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45%_45%_at_50%_40%,rgb(34_227_154/0.14),transparent_70%)]" />
       <CandleStorm mode="calm" className="mx-auto block h-[300px] w-full max-w-[760px] sm:h-[380px]" />
       <div className="mx-auto max-w-3xl px-5 text-center">
-        <h2 className="section-title">The market won&apos;t wait.<br />Why should your protection?</h2>
-        <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-dim">Take control of liquidation risk with event-driven, automated DeFi protection.</p>
+        <h2 className="section-title reveal">The market won&apos;t wait.<br />Why should your protection?</h2>
+        <p className="reveal mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-dim">Take control of liquidation risk with event-driven, automated DeFi protection.</p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <Magnetic><Link href="/app" className="cta-primary">Launch LiquidationRescue <ArrowRight className="h-4 w-4" /></Link></Magnetic>
           <Magnetic><a href={REPO} className="cta-ghost">Explore the Protocol</a></Magnetic>
@@ -381,5 +443,5 @@ function Final() {
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return <div className="mb-4 font-mono text-[12px] uppercase tracking-[0.2em] text-bull/90">{children}</div>;
+  return <div className="reveal mb-4 font-mono text-[12px] uppercase tracking-[0.2em] text-bull/90">{children}</div>;
 }

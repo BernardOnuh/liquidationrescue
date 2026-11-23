@@ -38,6 +38,14 @@ export function Simulator() {
     setReserve(PRESETS[k].reserve); setEvents([]); setLiquidated(false); setFlash(null);
   };
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
+  // The first time the simulator is on screen, the crash plays by itself; the button replays it.
+  const section = useRef<HTMLElement>(null), autoRan = useRef(false), crashRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting && !autoRan.current) { autoRan.current = true; setTimeout(() => crashRef.current(), 600); } }, { threshold: 0.45 });
+    if (section.current) io.observe(section.current);
+    return () => io.disconnect();
+  }, []);
   useEffect(() => { if (!flash) return; const id = setTimeout(() => setFlash(null), 1400); return () => clearTimeout(id); }, [flash]);
 
   const tick = () => {
@@ -67,6 +75,7 @@ export function Simulator() {
     setRunning(true);
     timer.current = setInterval(tick, 650);
   };
+  crashRef.current = crash;
 
   const hf = healthFactor(pos, price);
   const danger = Math.min(1, Math.max(0, (START.price - price) / (START.price - FLOOR)));
@@ -75,12 +84,12 @@ export function Simulator() {
   const status = liquidated ? "Liquidated" : last?.outcome === "Rescued" || last?.outcome === "PartiallyRescued" ? "Position protected" : hf < TRIGGER ? "Threat detected" : running ? "Watching every price event" : "Healthy";
 
   return (
-    <section id="simulate" className="relative overflow-hidden py-32">
+    <section id="simulate" ref={section} className="relative overflow-hidden py-32">
       <div className="pointer-events-none absolute inset-0 transition-opacity duration-700" style={{ opacity: liquidated ? 1 : danger * 0.8, background: "radial-gradient(60% 50% at 50% 50%, rgb(255 59 59 / 0.22), transparent 70%)" }} />
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <Eyebrow>Interactive rescue</Eyebrow>
-        <h2 className="section-title max-w-3xl">Don&apos;t just watch protection. Experience it.</h2>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">Trigger a market crash. Each price drop is one on-chain price event; below your trigger, the vault&apos;s real decision logic runs on every one.</p>
+        <h2 className="section-title reveal max-w-3xl">Don&apos;t just watch protection. Experience it.</h2>
+        <p className="reveal mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">Trigger a market crash. Each price drop is one on-chain price event; below your trigger, the vault&apos;s real decision logic runs on every one.</p>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-[1.2fr_1fr]">
           <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl sm:p-8">
