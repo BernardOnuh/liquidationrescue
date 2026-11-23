@@ -9,3 +9,4 @@ web/.next/
 web/next-env.d.ts
 shots/
 *.tsbuildinfo
+web/src/deployments/latency-local.json

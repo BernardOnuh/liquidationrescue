@@ -56,6 +56,24 @@ cd contracts && npm install && npx hardhat test
 
 Locally, Reactive Network is played by two test stand-ins (`contracts/contracts/test/ReactiveStandIns.sol`): one at the system contract address records subscriptions and callback requests, and one delivers callbacks the way the docs describe the proxy (it overwrites the first argument with the requesting reactive contract). Real logs from real transactions are fed to `react()`. These stand-ins are for tests only; the testnet deployment uses the real network.
 
+## Latency: every second counts
+
+Track: **Every Second Counts** (Base Sepolia). A rescue only helps if it lands before the liquidation, so the loop is measured end to end for every rescue on record:
+
+```bash
+cd contracts
+NETWORK=testnet npm run latency      # or NETWORK=local for the simulated local chain
+```
+
+`scripts/latency.ts` joins the three hops by `eventId`: the `PriceUpdated` transaction on Base Sepolia, the Lasna transaction where `react()` emitted `RescueRequested` (which carries the origin transaction hash), and the vault's `RescueEvaluated` callback on Base Sepolia. The price event and the rescue are both on Base Sepolia, so the **full loop is timed on one chain's clock**: block timestamps, plus the number of Base Sepolia blocks between them times the measured block time (about 200 ms) for sub-second detail. The split between the two hops crosses two chains' clocks and is shown as approximate. Results go to `web/src/deployments/latency-testnet.json`.
+
+Why Reactive Omni: the rescue is driven by the price event itself, not by polling. A keeper that polls every N seconds adds up to N seconds before it even notices the drop; here the loop is one event, one `react()`, one callback.
+
+| | Full loop (price event → rescue) | Source |
+|---|---|---|
+| Local chain (Reactive simulated by a relayer) | about 2 s | `NETWORK=local npm run latency`; not Reactive Network, for testing the measurement only |
+| Base Sepolia ↔ Lasna | pending testnet deploy | `NETWORK=testnet npm run latency` |
+
 ## Dashboard
 
 ```bash
@@ -97,4 +115,5 @@ Addresses go into `contracts/deployments.json` and `web/src/deployments/testnet.
 | Contracts and tests | Done, 14/14 passing locally |
 | Testnet deployment and real origin → Reactive → callback transaction hashes | Waiting for a funded testnet wallet |
 | Dashboard (`web/`) | Done: position and health-factor gauge, policy and reserve controls, rescue preview, price feed, cross-chain rescue log. Browser e2e passes at desktop and phone width |
+| Latency measurement (`scripts/latency.ts`) | Done; runs on the local chain, testnet numbers after deployment |
 | Demo video | After deployment |
