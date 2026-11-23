@@ -10,7 +10,7 @@ export function Panel({ title, icon, right, children, className = "" }: { title:
   return (
     <section className={`panel ${className}`}>
       <header className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-[15px] font-bold">{icon}{title}</h2>
+        <h2 className="flex items-center gap-2 font-display text-[16px] font-bold tracking-[-0.01em]">{icon}{title}</h2>
         {right}
       </header>
       {children}
@@ -23,7 +23,7 @@ export function Stat({ label, value, sub, tone }: { label: string; value: ReactN
   return (
     <div className="min-w-0">
       <div className="eyebrow">{label}</div>
-      <div className={`mt-1 truncate text-xl font-bold tabular-nums ${c}`}>{value}</div>
+      <div className={`mt-1 truncate font-mono text-[20px] font-semibold tabular-nums ${c}`}>{value}</div>
       {sub && <div className="mt-0.5 truncate text-[12px] text-dim">{sub}</div>}
     </div>
   );

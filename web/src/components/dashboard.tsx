@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
 import { formatEther, parseEther, parseUnits, type Address, type Hex } from "viem";
 import { Activity, ArrowRight, Clock, Gauge, Layers, LifeBuoy, Loader2, Pause, Play, Radio, ShieldCheck, TrendingDown, Trash2, Zap } from "lucide-react";
@@ -9,6 +9,8 @@ import { useAccountState, useMarket, usePriceHistory, useRescueLog, type RescueR
 import { HF_ONE, ago, fmtHF, fmtUsd, fmtUsdc, hfNum, price8, short, usdc } from "@/lib/format";
 import { Badge, Panel, Stat, TxLink, TxStatus } from "./ui";
 import { WalletButton, useTxRunner } from "./wallet";
+import { Mark } from "./brand";
+import Link from "next/link";
 
 const LT = 0.8; // the mock market's liquidation threshold
 
@@ -18,11 +20,11 @@ export function Dashboard() {
     <div className="glow-bg min-h-screen">
       <Header />
       {dep.simulated && (
-        <div className="border-b border-reactive/20 bg-reactive/10 px-4 py-2 text-center text-[12px] font-medium text-reactive">
+        <div className="mx-auto mt-3 max-w-7xl px-4 sm:px-6"><div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-center text-[12px] font-medium text-[#c3cad6]">
           Local simulation · Reactive Network is played by a local relayer and test tokens have no value. Real cross-chain proof comes from the testnet deployment.
-        </div>
+        </div></div>
       )}
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6">
         <Hero />
         {!deployed ? <NotDeployed /> : (
           <>
@@ -50,14 +52,15 @@ export function Dashboard() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-20 border-b border-edge bg-bg/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="" className="h-8 w-8" />
-          <span className="text-[16px] font-extrabold tracking-tight">Liquidation<span className="text-rescue">Rescue</span></span>
-        </div>
+    <header className="sticky top-0 z-20 px-3 pt-3 sm:px-5">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-full border border-white/10 bg-[#05070c]/85 py-2 pl-3 pr-2 shadow-[0_18px_50px_-24px_rgb(0_0_0/0.9)] backdrop-blur-xl sm:pl-4">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Mark />
+          <span className="font-display text-[17px] font-bold tracking-[-0.02em] text-white">Liquidation<span className="text-ok">Rescue</span></span>
+        </Link>
         <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-2 rounded-full border border-edge px-3 py-1.5 text-[12px] text-dim md:flex">
+          <Link href="/" className="hidden rounded-full px-3 py-2 text-[13px] font-medium text-[#c3cad6] transition hover:text-white sm:block">Home</Link>
+          <span className="hidden items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 font-mono text-[11px] tracking-[0.06em] text-[#c3cad6] md:flex">
             <span className="live-dot" />{dep.origin.name}{!isLocal && <> <ArrowRight className="h-3 w-3" /> {dep.reactive.name}</>}
           </span>
           <WalletButton />
@@ -71,8 +74,8 @@ function Hero() {
   return (
     <div className="mb-7 max-w-3xl">
       <Badge tone="rescue"><Zap className="h-3 w-3" />Event-triggered on Reactive Network</Badge>
-      <h1 className="mt-4 text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">Rescue before liquidation, <span className="text-rescue">within your limits.</span></h1>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-dim">
+      <h1 className="mt-4 font-display text-[34px] font-bold leading-[1.02] tracking-[-0.03em] text-white sm:text-[52px]">Rescue before liquidation, <span className="text-ok">within your limits.</span></h1>
+      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#c3cad6]">
         Set a trigger, a target and a budget, and fund your own reserve. When the collateral price drops, Reactive Network calls the vault, which rechecks your position and repays just enough debt to reach your target. Never more than your budget, never after expiry, and every decision is recorded.
       </p>
     </div>
@@ -94,24 +97,27 @@ function FlowStrip() {
   const last = data?.rows[0];
   const pending = data?.pending[0];
   const nodes = [
-    { icon: <TrendingDown className="h-4 w-4" />, chain: dep.origin.name, title: "Price drops", body: "The feed emits PriceUpdated", side: "origin" as const, hash: (last?.originTx ?? pending?.originTx) as Hex | undefined, tone: "text-rescue" },
-    { icon: <Radio className="h-4 w-4" />, chain: dep.simulated ? "Reactive (simulated)" : dep.reactive.name, title: "react() requests a callback", body: "One per protected user", side: "reactive" as const, hash: (last?.reactiveTx ?? pending?.reactiveTx) as Hex | undefined, tone: "text-reactive" },
-    { icon: <LifeBuoy className="h-4 w-4" />, chain: dep.origin.name, title: "Vault decides and repays", body: last ? last.outcome : "Rechecks HF, budget, price age", side: "origin" as const, hash: pending ? undefined : last?.callbackTx, tone: "text-ok" },
+    { icon: <TrendingDown className="h-4 w-4" />, chain: dep.origin.name, title: "Price drops", body: "The feed emits PriceUpdated", side: "origin" as const, hash: (last?.originTx ?? pending?.originTx) as Hex | undefined, tone: "#ff3b3b" },
+    { icon: <Radio className="h-4 w-4" />, chain: dep.simulated ? "Reactive (simulated)" : dep.reactive.name, title: "react() requests a callback", body: "One per protected user", side: "reactive" as const, hash: (last?.reactiveTx ?? pending?.reactiveTx) as Hex | undefined, tone: "#e8ecf5" },
+    { icon: <LifeBuoy className="h-4 w-4" />, chain: dep.origin.name, title: "Vault decides and repays", body: last ? last.outcome : "Rechecks HF, budget, price age", side: "origin" as const, hash: pending ? undefined : last?.callbackTx, tone: "#22e39a" },
   ];
   return (
-    <div className="grid-bg rounded-3xl border border-edge bg-panel/60 p-4 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="eyebrow">Latest rescue, across chains</span>
+    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#05070c]">
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
+        <span className="flex items-center gap-2.5 font-mono text-[11.5px] tracking-[0.14em] text-[#c3cad6]"><span className="live-dot" />LATEST RESCUE · ACROSS CHAINS</span>
         {pending && <Badge tone="reactive"><Loader2 className="h-3 w-3 animate-spin" />Callback in flight</Badge>}
       </div>
-      <ol className="grid gap-3 md:grid-cols-3">
+      <ol className="grid gap-3 p-4 sm:p-5 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-0">
         {nodes.map((n, i) => (
-          <li key={i} className="relative rounded-2xl border border-edge bg-bg/70 p-4">
-            <div className={`flex items-center gap-2 text-[13px] font-bold ${n.tone}`}>{n.icon}<span>{i + 1}. {n.title}</span></div>
-            <div className="mt-1 text-[12px] text-dim">{n.chain} · {n.body}</div>
-            <div className="mt-2.5"><TxLink side={n.side} hash={n.hash} /></div>
-            {i < 2 && <ArrowRight className="absolute -right-3 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 rounded-full bg-panel p-0.5 text-dim md:block" />}
-          </li>
+          <Fragment key={i}>
+            <li className="rounded-2xl border p-4" style={{ borderColor: `${n.tone}40`, background: `${n.tone}0a` }}>
+              <div className="flex items-center justify-between font-mono text-[11px] font-semibold tracking-[0.14em]" style={{ color: n.tone }}><span>{n.chain.toUpperCase()}</span>{n.icon}</div>
+              <div className="mt-2 font-display text-[17px] font-bold text-white">{n.title}</div>
+              <div className="mt-0.5 text-[12px] text-dim">{n.body}</div>
+              <div className="mt-3 border-t border-white/[0.07] pt-3"><TxLink side={n.side} hash={n.hash} /></div>
+            </li>
+            {i < 2 && <div className="flex items-center justify-center md:w-12"><span className="h-6 w-px md:h-px md:w-full" style={{ background: `linear-gradient(90deg, ${n.tone}, ${nodes[i + 1].tone})` }} /></div>}
+          </Fragment>
         ))}
       </ol>
     </div>
@@ -309,7 +315,7 @@ function Sparkline({ points }: { points: number[] }) {
   const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
   const xy = points.map((p, i) => `${(i / (points.length - 1)) * 100},${36 - ((p - min) / span) * 32 - 2}`);
   const down = points[points.length - 1] < points[0];
-  const c = down ? "var(--color-rescue)" : "var(--color-ok)";
+  const c = down ? "var(--color-danger)" : "var(--color-ok)";
   return (
     <svg viewBox="0 0 100 36" preserveAspectRatio="none" className="h-20 w-full">
       <defs><linearGradient id="spark" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={c} stopOpacity="0.35" /><stop offset="1" stopColor={c} stopOpacity="0" /></linearGradient></defs>

@@ -3,18 +3,18 @@
 @theme {
   --font-sans: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --color-bg: #070a12;
-  --color-panel: #0d1220;
-  --color-panel-2: #121a2c;
+  --color-bg: #04060d;
+  --color-panel: #070a11;
+  --color-panel-2: #0b0f18;
   --color-edge: rgb(255 255 255 / 0.08);
-  --color-text: #e8ecf5;
-  --color-dim: #8c96ab;
-  --color-rescue: #ff7a45;
-  --color-rescue-soft: rgb(255 122 69 / 0.12);
-  --color-ok: #34d399;
-  --color-warn: #fbbf24;
-  --color-danger: #f43f5e;
-  --color-reactive: #a78bfa;
+  --color-text: #eef1f6;
+  --color-dim: #9aa3b2;
+  --color-rescue: #22e39a;
+  --color-rescue-soft: rgb(34 227 154 / 0.1);
+  --color-ok: #22e39a;
+  --color-warn: #ff8080;
+  --color-danger: #ff3b3b;
+  --color-reactive: #e8ecf5;
   --color-bull: #22e39a;
   --color-bear: #ff3b3b;
   --font-display: "Space Grotesk", "Inter Tight", ui-sans-serif, system-ui, sans-serif;
@@ -25,7 +25,7 @@ body { background: var(--color-bg); color: var(--color-text); @apply antialiased
 
 @utility panel { @apply rounded-3xl border border-edge bg-panel p-5 sm:p-6; }
 @utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40; }
-@utility btn-primary { @apply btn bg-rescue text-bg shadow-[0_10px_30px_-12px_rgb(255_122_69/0.8)] hover:brightness-110; }
+@utility btn-primary { @apply btn bg-rescue text-bg shadow-[0_10px_30px_-14px_rgb(34_227_154/0.7)] hover:brightness-110; }
 @utility btn-ghost { @apply btn border border-edge bg-white/[0.03] text-text hover:bg-white/[0.07]; }
 @utility btn-danger { @apply btn border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20; }
 @utility input { @apply w-full rounded-xl border border-edge bg-bg px-3.5 py-2.5 font-mono text-[14px] text-text outline-none transition placeholder:text-dim/60 focus:border-rescue/60 focus:ring-4 focus:ring-rescue/15; }
@@ -35,15 +35,15 @@ body { background: var(--color-bg); color: var(--color-text); @apply antialiased
 
 @utility glow-bg {
   background:
-    radial-gradient(900px 400px at 15% -10%, rgb(255 122 69 / 0.14), transparent 60%),
-    radial-gradient(700px 380px at 95% 0%, rgb(167 139 250 / 0.12), transparent 60%);
+    radial-gradient(900px 380px at 15% -10%, rgb(34 227 154 / 0.07), transparent 60%),
+    radial-gradient(700px 360px at 95% 0%, rgb(255 59 59 / 0.05), transparent 60%);
 }
 @utility grid-bg {
   background-image: linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(255 122 69 / 0.5); } 100% { box-shadow: 0 0 0 10px rgb(255 122 69 / 0); } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(34 227 154 / 0.5); } 100% { box-shadow: 0 0 0 10px rgb(34 227 154 / 0); } }
 @utility live-dot { @apply inline-block h-2 w-2 rounded-full bg-ok; animation: pulse-ring 1.6s ease-out infinite; }
 
 /* ---------- homepage ---------- */
