@@ -1,16 +1,14 @@
 "use client";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, Ban, CalendarClock, Fingerprint, Gauge, PauseCircle, PiggyBank, Target, Wallet } from "lucide-react";
-import type { Phase } from "./LiquidSphere";
+import { CandleStorm, type StormPhase } from "./CandleStorm";
 import { Simulator } from "./Simulator";
 import { Speed, type LatencySummary } from "./Speed";
 import { Magnetic } from "./Magnetic";
 
-const LiquidSphere = dynamic(() => import("./LiquidSphere").then(m => m.LiquidSphere), { ssr: false });
 const REPO = "https://github.com/BernardOnuh/liquidationrescue";
 
 export function Landing({ latency }: { latency: LatencySummary | null }) {
@@ -52,13 +50,13 @@ function Nav() {
 
 // ---------- 1. Hero ----------
 function Hero() {
-  const [phase, setPhase] = useState<Phase>("calm");
-  const message = phase === "shield" || phase === "safe";
+  const [phase, setPhase] = useState<StormPhase>("calm");
+  const message = phase === "shield" || phase === "rally";
   return (
     <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden">
-      <div className={`pointer-events-none absolute inset-0 -z-10 transition-colors duration-1000 ${phase === "threat" ? "bg-[radial-gradient(60%_60%_at_70%_50%,rgb(255_70_20/0.16),transparent_70%)]" : "bg-[radial-gradient(60%_60%_at_70%_50%,rgb(34_211_238/0.12),transparent_70%)]"}`} />
+      <div className={`pointer-events-none absolute inset-0 -z-10 transition-colors duration-1000 ${phase === "crash" ? "bg-[radial-gradient(60%_60%_at_70%_50%,rgb(255_70_20/0.16),transparent_70%)]" : "bg-[radial-gradient(60%_60%_at_70%_50%,rgb(34_211_238/0.12),transparent_70%)]"}`} />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,transparent_60%,#04060d)]" />
-      <LiquidSphere onPhase={setPhase} className="absolute inset-x-0 top-12 -z-10 h-[46svh] md:inset-0 md:left-[34%] md:top-0 md:h-auto" />
+      <CandleStorm onPhase={setPhase} className="absolute inset-x-0 top-14 -z-10 h-[44svh] w-full md:inset-y-0 md:left-[36%] md:top-0 md:h-full md:w-[64%]" />
       <div className="mx-auto w-full max-w-7xl px-5 pb-16 pt-[52svh] sm:px-8 md:pb-20 md:pt-28">
         <div className="max-w-[640px]">
           <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] text-dim backdrop-blur">
@@ -308,7 +306,7 @@ function Final() {
   return (
     <section className="relative isolate overflow-hidden pb-16 pt-24">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45%_45%_at_50%_40%,rgb(34_211_238/0.14),transparent_70%)]" />
-      <LiquidSphere mode="calm" className="mx-auto h-[360px] w-full max-w-[520px] sm:h-[440px]" />
+      <CandleStorm mode="calm" className="mx-auto block h-[300px] w-full max-w-[760px] sm:h-[380px]" />
       <div className="mx-auto max-w-3xl px-5 text-center">
         <h2 className="section-title">The market won&apos;t wait.<br />Why should your protection?</h2>
         <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-dim">Take control of liquidation risk with event-driven, automated DeFi protection.</p>

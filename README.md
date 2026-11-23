@@ -78,7 +78,7 @@ Why Reactive Omni: the rescue is driven by the price event itself, not by pollin
 
 `web/` serves two pages:
 
-- **`/`**, the homepage: a liquid-metal hero (Three.js / React Three Fiber, custom GLSL), the problem as a scroll-driven price crash, the Base Sepolia → Lasna → Base Sepolia loop, an **interactive crash simulator** that runs the vault's own decision logic in the browser (`web/src/lib/rescue-sim.ts` mirrors `ProtectionVault._rescue` and `_repayToReach`; no transactions), polling vs event-driven timing, and the policy controls. Measured latency is shown only when `web/src/deployments/latency-testnet.json` exists. Reduced motion is respected throughout.
+- **`/`**, the homepage: a candlestick hero (red candles crash like lightning toward liquidation, a shield stops the fall at the rescue threshold, a green rescue candle lifts the health factor to the target, then recovery; 2D canvas), the problem as a scroll-driven price crash, the Base Sepolia → Lasna → Base Sepolia loop, an **interactive crash simulator** that runs the vault's own decision logic in the browser (`web/src/lib/rescue-sim.ts` mirrors `ProtectionVault._rescue` and `_repayToReach`; no transactions), polling vs event-driven timing, and the policy controls. Measured latency is shown only when `web/src/deployments/latency-testnet.json` exists. Reduced motion is respected throughout.
 - **`/app`**, the dashboard below.
 
 ## Dashboard
