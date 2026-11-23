@@ -159,7 +159,7 @@ function Problem() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_30%_50%,rgb(255_59_59/0.22),transparent_70%)]" style={{ opacity: "var(--p)" }} />
         <div className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: "calc(var(--p) * 0.45)" }} />
         <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-5 sm:px-8 md:grid-cols-2">
-          <LiquidStructure />
+          <CrashChart />
           <div>
             <Eyebrow>The problem · Liquidation never waits</Eyebrow>
             <h2 className="section-title">One price drop.<br />Everything at risk.</h2>
@@ -180,26 +180,43 @@ function Problem() {
   );
 }
 
-function LiquidStructure() {
-  // A blue liquid body; scroll progress (--p) floods it red and draws fractures through it.
-  const cracks = ["M210 120 L232 178 L214 214 L250 262 L236 320", "M300 150 L284 206 L318 246 L296 300", "M150 230 L196 250 L188 300 L226 338", "M330 230 L296 268 L332 312 L300 360", "M240 90 L262 140 L244 168"];
+// The price crash as candles, revealed by scroll progress (--p): no state, so it costs nothing per frame.
+const CRASH = (() => {
+  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const out: { o: number; c: number; h: number; l: number }[] = []; let p = POS.from; const N = 24;
+  const weights = Array.from({ length: N }, (_, i) => (i < 5 ? 0.25 : i > 17 ? 2.1 : 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < N; i++) {
+    const drift = ((POS.to - POS.from) * weights[i]) / total;
+    const noise = i === N - 1 ? 0 : (rnd() - 0.5) * (i < 5 ? 130 : 170);
+    const c = i === N - 1 ? Math.min(POS.to, p - 70) : p + drift + noise; // the last candle always closes lower
+    out.push({ o: p, c, h: Math.max(p, c) + 15 + rnd() * 55, l: Math.min(p, c) - 15 - rnd() * 55 }); p = c;
+  }
+  return out;
+})();
+const LIQ_PRICE = POS.debt / (POS.collateral * 0.8); // HF = 1 → $2,000
+
+function CrashChart() {
+  const lo = 1700, hi = 3400, Y = (v: number) => 380 - ((v - lo) / (hi - lo)) * 340, step = 18.2, w = 12;
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[460px]">
-      <svg viewBox="0 0 480 480" className="h-full w-full">
-        <defs>
-          <filter id="liquid"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4"><animate attributeName="baseFrequency" dur="14s" values="0.012;0.018;0.012" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" scale="38" /></filter>
-          <radialGradient id="blue" cx="38%" cy="32%" r="75%"><stop offset="0" stopColor="#d8ffef" /><stop offset="0.25" stopColor="#22e39a" /><stop offset="0.7" stopColor="#0b5e43" /><stop offset="1" stopColor="#04140f" /></radialGradient>
-          <radialGradient id="red" cx="50%" cy="60%" r="70%"><stop offset="0" stopColor="#ffc2c2" /><stop offset="0.4" stopColor="#ff3b3b" /><stop offset="1" stopColor="#3b0707" /></radialGradient>
-          <filter id="glow"><feGaussianBlur stdDeviation="3" /><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        </defs>
-        <g filter="url(#liquid)">
-          <circle cx="240" cy="240" r="150" fill="url(#blue)" />
-          <circle cx="240" cy="240" r="150" fill="url(#red)" style={{ opacity: "var(--p)" }} />
-          <ellipse cx="196" cy="180" rx="56" ry="26" fill="white" opacity="0.18" />
-        </g>
-        <g filter="url(#glow)" fill="none" stroke="#ffd6d6" strokeWidth="2.2" strokeLinecap="round">
-          {cracks.map((d, i) => <path key={i} d={d} pathLength={1} strokeDasharray="1" style={{ strokeDashoffset: `calc(1 - clamp(0, (var(--p) - ${0.15 + i * 0.12}) * 3, 1))` }} />)}
-        </g>
+    <div className="relative mx-auto w-full max-w-[520px] rounded-[28px] border border-white/10 bg-[#05070c]/80 p-3">
+      <div className="flex items-center justify-between px-2 pb-2 pt-1 font-mono text-[11px] tracking-[0.12em] text-[#c3cad6]"><span>WETH / USD</span><span className="text-bear" style={{ opacity: "var(--p)" }}>▼ CRASH</span></div>
+      <svg viewBox="0 0 500 400" className="w-full">
+        {[3200, 2800, 2400, 2000].map(v => (
+          <g key={v}><line x1="0" x2="452" y1={Y(v)} y2={Y(v)} stroke="rgb(255 255 255 / 0.06)" /><text x="496" y={Y(v) + 4} textAnchor="end" fill="#8c96ab" fontSize="11" fontFamily="JetBrains Mono, monospace">{v.toLocaleString("en-US")}</text></g>
+        ))}
+        <rect x="0" y={Y(LIQ_PRICE)} width="452" height={400 - Y(LIQ_PRICE)} fill="rgb(255 59 59 / 0.12)" style={{ opacity: "var(--p)" }} />
+        <line x1="0" x2="452" y1={Y(LIQ_PRICE)} y2={Y(LIQ_PRICE)} stroke="#ff3b3b" strokeDasharray="6 6" />
+        <text x="8" y={Y(LIQ_PRICE) + 18} fill="#ff3b3b" fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">LIQUIDATION · HF 1.00 · $2,000</text>
+        {CRASH.map((k, i) => {
+          const x = 16 + i * step, up = k.c >= k.o, col = up ? "#22e39a" : "#ff3b3b";
+          return (
+            <g key={i} style={{ opacity: `clamp(0, calc(var(--p) * ${CRASH.length + 2} - ${i}), 1)` }}>
+              <line x1={x} x2={x} y1={Y(k.h)} y2={Y(k.l)} stroke={col} strokeWidth="1.3" />
+              <rect x={x - w / 2} y={Y(Math.max(k.o, k.c))} width={w} height={Math.max(2, Y(Math.min(k.o, k.c)) - Y(Math.max(k.o, k.c)))} fill={col} rx="1" />
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
@@ -241,7 +258,6 @@ function Solution() {
   return (
     <section id="how" ref={root} className="relative">
       <div className="solution-stage relative flex min-h-[100svh] flex-col justify-center overflow-hidden py-24">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_50%_at_50%_45%,rgb(34_227_154/0.10),transparent_70%)]" />
         <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
           <Eyebrow>The solution · We react</Eyebrow>
           <h2 className="section-title max-w-3xl">The moment risk appears, protection begins.</h2>
@@ -250,19 +266,18 @@ function Solution() {
             <defs>
               <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stopColor="#ff3b3b" /><stop offset="1" stopColor="#e8ecf5" /></linearGradient>
               <linearGradient id="g2" x1="0" x2="1"><stop offset="0" stopColor="#e8ecf5" /><stop offset="1" stopColor="#22e39a" /></linearGradient>
-              <filter id="soft"><feGaussianBlur stdDeviation="6" /></filter>
             </defs>
-            {[["#hop1", "M252 150 C 380 40, 470 260, 538 150", "url(#g1)"], ["#hop2", "M662 150 C 790 40, 880 260, 948 150", "url(#g2)"]].map(([id, d, s]) => (
+            {[["#hop1", "M300 150 H490", "url(#g1)"], ["#hop2", "M710 150 H900", "url(#g2)"]].map(([id, d, s]) => (
               <g key={id}>
-                <path d={d} stroke={s} strokeWidth="16" fill="none" opacity="0.18" filter="url(#soft)" />
-                <path id={id.slice(1)} d={d} stroke={s} strokeWidth="3" fill="none" className="liquid-flow" />
+                <path d={d} stroke="rgb(255 255 255 / 0.08)" strokeWidth="10" fill="none" strokeLinecap="round" />
+                <path id={id.slice(1)} d={d} stroke={s} strokeWidth="2.5" fill="none" className="liquid-flow" />
               </g>
             ))}
-            <Node x={190} label="Base Sepolia" sub="Price feed" tone="#ff3b3b" on={stage >= 0} />
-            <Node x={600} label="Reactive Lasna" sub="react()" tone="#e8ecf5" on={stage >= 1} />
-            <Node x={1010} label="Base Sepolia" sub="ProtectionVault" tone="#22e39a" on={stage >= 2} />
-            <circle id="pulse-halo" r="26" opacity="0.35" filter="url(#soft)" />
-            <circle id="pulse" r="9" />
+            <Node x={190} chain="BASE SEPOLIA" title="Price feed" line="PriceUpdated event" tone="#ff3b3b" on={stage >= 0} />
+            <Node x={600} chain="REACTIVE LASNA" title="react()" line="RescueRequested" tone="#e8ecf5" on={stage >= 1} />
+            <Node x={1010} chain="BASE SEPOLIA" title="ProtectionVault" line="onRiskEvent → repay" tone="#22e39a" on={stage >= 2} />
+            <circle id="pulse-halo" r="0" opacity="0" />
+            <circle id="pulse" r="6" />
           </svg>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {stages.map((s, i) => (
@@ -279,13 +294,14 @@ function Solution() {
   );
 }
 
-function Node({ x, label, sub, tone, on }: { x: number; label: string; sub: string; tone: string; on: boolean }) {
+function Node({ x, chain, title, line, tone, on }: { x: number; chain: string; title: string; line: string; tone: string; on: boolean }) {
   return (
-    <g style={{ transition: "opacity .5s", opacity: on ? 1 : 0.45 }}>
-      <circle cx={x} cy={150} r={on ? 76 : 70} fill={tone} opacity={on ? 0.16 : 0.06} style={{ transition: "all .5s" }} />
-      <circle cx={x} cy={150} r={60} fill="#0a0f1d" stroke={tone} strokeWidth="2" />
-      <text x={x} y={146} textAnchor="middle" fill="#e8ecf5" fontSize="15" fontWeight="600">{label}</text>
-      <text x={x} y={166} textAnchor="middle" fill="#8c96ab" fontSize="12" fontFamily="JetBrains Mono, monospace">{sub}</text>
+    <g style={{ transition: "opacity .5s", opacity: on ? 1 : 0.4 }}>
+      <rect x={x - 110} y={98} width={220} height={104} rx="16" fill="#06080e" stroke={on ? tone : "rgb(255 255 255 / 0.14)"} strokeWidth={on ? 1.8 : 1.2} style={{ transition: "stroke .5s" }} />
+      <rect x={x - 110} y={98} width={220} height={4} rx="2" fill={tone} opacity={on ? 1 : 0.3} />
+      <text x={x - 92} y={130} fill={tone} fontSize="11" fontWeight="600" letterSpacing="1.6" fontFamily="JetBrains Mono, monospace">{chain}</text>
+      <text x={x - 92} y={160} fill="#ffffff" fontSize="20" fontWeight="700" fontFamily="Space Grotesk, Inter Tight, sans-serif">{title}</text>
+      <text x={x - 92} y={184} fill="#c3cad6" fontSize="12" fontFamily="JetBrains Mono, monospace">{line}</text>
     </g>
   );
 }
@@ -322,7 +338,8 @@ function Control() {
         </div>
         <div className="vault relative rounded-[36px] p-[1px]">
           <div className="relative overflow-hidden rounded-[35px] bg-[#070b16]/80 p-6 backdrop-blur-xl sm:p-8">
-            <div className="vault-liquid pointer-events-none absolute -inset-20 opacity-60" />
+            <div className="grid-bg pointer-events-none absolute inset-0 opacity-60" />
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-bull/70" />
             <div className="relative mb-5 flex items-center justify-between">
               <span className="font-mono text-[12px] tracking-[0.2em] text-bull">PROTECTIONVAULT · POLICY</span>
               <span className="rounded-full border border-bull/30 bg-bull/10 px-2.5 py-0.5 text-[11px] font-semibold text-bull">Active</span>

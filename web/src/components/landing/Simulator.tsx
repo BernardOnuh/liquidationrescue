@@ -38,6 +38,7 @@ export function Simulator() {
     setReserve(PRESETS[k].reserve); setEvents([]); setLiquidated(false); setFlash(null);
   };
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
+  useEffect(() => { if (!flash) return; const id = setTimeout(() => setFlash(null), 1400); return () => clearTimeout(id); }, [flash]);
 
   const tick = () => {
     const s = state.current;
@@ -76,7 +77,6 @@ export function Simulator() {
   return (
     <section id="simulate" className="relative overflow-hidden py-32">
       <div className="pointer-events-none absolute inset-0 transition-opacity duration-700" style={{ opacity: liquidated ? 1 : danger * 0.8, background: "radial-gradient(60% 50% at 50% 50%, rgb(255 59 59 / 0.22), transparent 70%)" }} />
-      <div className={`pointer-events-none absolute left-1/2 top-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-[1400ms] ease-out ${flash === "rescue" ? "scale-100 opacity-100" : "scale-0 opacity-0"}`} style={{ background: "radial-gradient(circle, rgb(34 227 154 / 0.16) 0%, rgb(34 227 154 / 0.06) 35%, transparent 60%)" }} onTransitionEnd={() => flash === "rescue" && setFlash(null)} />
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <Eyebrow>Interactive rescue</Eyebrow>
         <h2 className="section-title max-w-3xl">Don&apos;t just watch protection. Experience it.</h2>
@@ -110,7 +110,7 @@ export function Simulator() {
             </div>
           </div>
 
-          <div className={`relative overflow-hidden rounded-[32px] border p-6 transition-colors duration-500 sm:p-8 ${liquidated ? "border-bear/40 bg-bear/[0.06]" : status === "Position protected" ? "border-bull/40 bg-bull/[0.05]" : "border-white/10 bg-white/[0.03]"}`}>
+          <div className={`relative overflow-hidden rounded-[32px] border p-6 transition-[colors,box-shadow] duration-500 sm:p-8 ${flash === "rescue" ? "shadow-[0_0_0_1px_rgb(34_227_154/0.7),0_0_90px_-20px_rgb(34_227_154/0.7)] " : ""}${liquidated ? "border-bear/40 bg-bear/[0.06]" : status === "Position protected" ? "border-bull/40 bg-bull/[0.05]" : "border-white/10 bg-white/[0.03]"}`}>
             <div className="flex items-center gap-3">
               {liquidated ? <ShieldAlert className="h-6 w-6 text-bear" /> : <ShieldCheck className={`h-6 w-6 ${status === "Position protected" ? "text-bull" : "text-dim"}`} />}
               <div className="text-[22px] font-semibold tracking-tight">{status}</div>
