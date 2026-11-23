@@ -46,6 +46,13 @@ body { background: var(--color-bg); color: var(--color-text); @apply antialiased
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(34 227 154 / 0.5); } 100% { box-shadow: 0 0 0 10px rgb(34 227 154 / 0); } }
 @utility live-dot { @apply inline-block h-2 w-2 rounded-full bg-ok; animation: pulse-ring 1.6s ease-out infinite; }
 
+/* ---------- modals ---------- */
+@keyframes modal-fade { from { opacity: 0; } }
+@keyframes modal-rise { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+.modal-backdrop { animation: modal-fade .2s ease-out; }
+.modal-box { animation: modal-rise .28s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) { .modal-backdrop, .modal-box { animation: none; } }
+
 /* ---------- homepage ---------- */
 html { scroll-behavior: smooth; }
 @utility section-title { @apply font-display text-[38px] font-bold leading-[1.02] tracking-[-0.03em] text-white sm:text-[56px]; }

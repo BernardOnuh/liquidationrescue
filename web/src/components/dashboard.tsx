@@ -7,7 +7,7 @@ import { MockERC20Abi, MockLendingMarketAbi, MockPriceOracleAbi, ProtectionVault
 import { dep, deployed, isLocal } from "@/lib/config";
 import { useAccountState, useMarket, usePriceHistory, useRescueLog, type RescueRow } from "@/lib/data";
 import { HF_ONE, ago, fmtHF, fmtUsd, fmtUsdc, hfNum, price8, short, usdc } from "@/lib/format";
-import { Badge, Panel, Stat, TxLink, TxStatus } from "./ui";
+import { Badge, CopyButton, Modal, Panel, Stat, TxLink, TxStatus } from "./ui";
 import { WalletButton, useTxRunner } from "./wallet";
 import { Mark } from "./brand";
 import Link from "next/link";
@@ -244,6 +244,7 @@ function PolicyPanel({ user }: { user?: Address }) {
   const withdraw = () => tx.run([{ label: "Withdraw unused reserve", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "withdrawUnused", args: [parseUnits(amount || "0", 6)] }) }]);
   const setPaused = (paused: boolean) => tx.run([{ label: paused ? "Pause policy" : "Resume policy", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "setPaused", args: [paused] }) }]);
   const revoke = () => tx.run([{ label: "Revoke policy", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "revokePolicy" }) }]);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   const expired = active && Number(p.expiry) < Date.now() / 1000;
   const status = !active ? <Badge>No policy</Badge> : expired ? <Badge tone="danger">Expired</Badge> : p.paused ? <Badge tone="warn">Paused</Badge> : <Badge tone="ok"><ShieldCheck className="h-3 w-3" />Protected</Badge>;
@@ -267,7 +268,7 @@ function PolicyPanel({ user }: { user?: Address }) {
               <div className="flex flex-wrap gap-2">
                 <button className="btn-ghost" disabled={tx.busy} onClick={() => setEditing(true)}>Edit</button>
                 <button className="btn-ghost" disabled={tx.busy} onClick={() => setPaused(!p.paused)}>{p.paused ? <><Play className="h-4 w-4" />Resume</> : <><Pause className="h-4 w-4" />Pause</>}</button>
-                <button className="btn-danger" disabled={tx.busy} onClick={revoke}><Trash2 className="h-4 w-4" />Revoke</button>
+                <button className="btn-danger" disabled={tx.busy} onClick={() => setConfirmRevoke(true)}><Trash2 className="h-4 w-4" />Revoke</button>
               </div>
             </div>
           ) : (
@@ -306,6 +307,14 @@ function PolicyPanel({ user }: { user?: Address }) {
         </div>
       </div>
       <TxStatus state={tx.state} />
+      <Modal open={confirmRevoke} onClose={() => setConfirmRevoke(false)} tone="#ff3b3b" eyebrow="PROTECTION OFF" title="Revoke your rescue policy?"
+        footer={<><button className="btn-ghost" onClick={() => setConfirmRevoke(false)}>Keep protection</button><button className="btn-danger" disabled={tx.busy} onClick={() => { setConfirmRevoke(false); revoke(); }}><Trash2 className="h-4 w-4" />Revoke policy</button></>}>
+        <ul className="space-y-2.5 text-[14px] leading-relaxed text-[#c3cad6]">
+          <li>• The vault <b className="text-white">stops rescuing</b> this position, and Reactive stops tracking it after the next policy event.</li>
+          <li>• Your reserve <b className="text-white">stays in the vault</b>; withdraw it any time.</li>
+          <li>• The amount already spent is kept, so a new policy can&apos;t reset your lifetime budget.</li>
+        </ul>
+      </Modal>
     </Panel>
   );
 }
@@ -314,7 +323,7 @@ interface PricePoint { price: bigint; at: number; tx: Hex }
 const RESCUED = new Set(["Rescued", "Partially rescued"]);
 
 /** One candle per PriceUpdated event on the oracle: it opens at the previous price and closes at the new one. */
-function PriceCandles({ hist, liqPrice, triggerPrice, decisions }: { hist: PricePoint[]; liqPrice?: number; triggerPrice?: number; decisions: Map<string, string> }) {
+function PriceCandles({ hist, liqPrice, triggerPrice, decisions, onPick }: { hist: PricePoint[]; liqPrice?: number; triggerPrice?: number; decisions: Map<string, string>; onPick: (i: number) => void }) {
   if (hist.length < 2) return <div className="grid h-56 place-items-center text-[13px] text-dim">Waiting for price events…</div>;
   const W = 820, H = 250, padR = 76, top = 16, bottom = H - 26;
   const prices = hist.map(h => price8(h.price));
@@ -348,7 +357,8 @@ function PriceCandles({ hist, liqPrice, triggerPrice, decisions }: { hist: Price
         const c = prices[i], o = i > 0 ? prices[i - 1] : c, up = c >= o, col = up ? "#22e39a" : "#ff3b3b";
         const y1 = Y(Math.max(o, c)), y2 = Y(Math.min(o, c)), d = decisions.get(h.tx.toLowerCase());
         return (
-          <g key={h.tx}>
+          <g key={h.tx} className="cursor-pointer" onClick={() => onPick(i)}>
+            <rect x={x(i) - step / 2} y={top} width={step} height={bottom - top} fill="transparent" />
             <title>{`${fmtUsd(o)} → ${fmtUsd(c)} · ${ago(h.at)}${d ? ` · vault: ${d}` : ""}`}</title>
             <line x1={x(i)} x2={x(i)} y1={y1 - 3} y2={y2 + 3} stroke={col} strokeWidth="1.2" />
             <rect x={x(i) - bw / 2} y={y1} width={bw} height={Math.max(2, y2 - y1)} rx="1.5" fill={col} opacity={i === hist.length - 1 ? 1 : 0.85} />
@@ -374,6 +384,7 @@ function PricePanel({ user }: { user?: Address }) {
   const { data: a } = useAccountState(user);
   const { writeContractAsync } = useWriteContract();
   const tx = useTxRunner();
+  const [picked, setPicked] = useState<number | null>(null);
   if (!m) return null;
   const price = price8(m.price);
   const isOperator = user && dep.priceOperator && user.toLowerCase() === dep.priceOperator.toLowerCase();
@@ -417,8 +428,28 @@ function PricePanel({ user }: { user?: Address }) {
           </div>
         </div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3">
-          <PriceCandles hist={points} liqPrice={liqPrice} triggerPrice={triggerPrice} decisions={decisions} />
+          <PriceCandles hist={points} liqPrice={liqPrice} triggerPrice={triggerPrice} decisions={decisions} onPick={setPicked} />
         </div>
+        {picked !== null && points[picked] && (() => {
+          const h = points[picked], c = price8(h.price), o = picked > 0 ? price8(points[picked - 1].price) : c, pct = o ? ((c - o) / o) * 100 : 0, d = decisions.get(h.tx.toLowerCase());
+          return (
+            <Modal open onClose={() => setPicked(null)} tone={c < o ? "#ff3b3b" : "#22e39a"} eyebrow={`PRICE EVENT ${picked + 1} OF ${points.length}`} title={`${fmtUsd(o)} → ${fmtUsd(c)}`}
+              footer={<button className="btn-ghost" onClick={() => setPicked(null)}>Close</button>}>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3"><div className="eyebrow !text-[10px]">Move</div><div className={`mt-1 font-mono text-[15px] ${c < o ? "text-danger" : "text-ok"}`}>{c < o ? "▼" : "▲"} {Math.abs(pct).toFixed(2)}%</div></div>
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3"><div className="eyebrow !text-[10px]">When</div><div className="mt-1 font-mono text-[15px] text-white">{ago(h.at)}</div></div>
+              </div>
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.07] px-3 py-2.5 text-[13px]">
+                <span className="text-dim">PriceUpdated · {dep.origin.name}</span><span className="flex items-center gap-1"><TxLink side="origin" hash={h.tx} /><CopyButton text={h.tx} /></span>
+              </div>
+              <p className="mt-4 text-[14px] leading-relaxed text-[#c3cad6]">
+                {d ? <>The vault decided <b className={RESCUED.has(d) ? "text-ok" : "text-warn"}>{d}</b> because of this event. {OUTCOME_EXPLAIN[d] ?? ""}</>
+                  : c < o ? "Reactive Network saw this drop. No rescue decision is linked to it for " + (user ? "your position" : "any position") + ": nothing was below its trigger, or nobody was protected."
+                  : "A price rise: Reactive ignores rises, so no rescue is requested."}
+              </p>
+            </Modal>
+          );
+        })()}
       </div>
     </Panel>
   );
@@ -454,6 +485,7 @@ const OUTCOME_TONE: Record<string, string> = { Rescued: "ok", "Partially rescued
 function RescueLog({ user }: { user?: Address }) {
   const { data } = useRescueLog();
   const [mine, setMine] = useState(false);
+  const [open, setOpen] = useState<RescueRow | null>(null);
   const rows = (data?.rows ?? []).filter(r => !mine || (user && r.user.toLowerCase() === user.toLowerCase()));
   return (
     <Panel className="mt-5" title="Rescue log" icon={<LifeBuoy className="h-4 w-4 text-rescue" />}
@@ -467,25 +499,26 @@ function RescueLog({ user }: { user?: Address }) {
       ))}
       {rows.length === 0 ? <p className="text-[14px] text-dim">No rescue decisions yet. Protect a position, then let the price drop.</p> : (
         <>
-        <ul className="space-y-2 md:hidden">{rows.map(r => <Card key={r.eventId} r={r} you={user} />)}</ul>
+        <ul className="space-y-2 md:hidden">{rows.map(r => <Card key={r.eventId} r={r} you={user} onOpen={() => setOpen(r)} />)}</ul>
         <div className="-mx-2 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[760px] text-left text-[13px]">
             <thead><tr className="eyebrow">{["Outcome", "User", "Price", "Health factor", "Repaid", "Price event", "Reactive", "Callback"].map(h => <th key={h} className="px-2 pb-2 font-bold">{h}</th>)}</tr></thead>
-            <tbody>{rows.map(r => <Row key={r.eventId} r={r} you={user} />)}</tbody>
+            <tbody>{rows.map(r => <Row key={r.eventId} r={r} you={user} onOpen={() => setOpen(r)} />)}</tbody>
           </table>
         </div>
         </>
       )}
+      <RescueDetail r={open} you={user} onClose={() => setOpen(null)} />
     </Panel>
   );
 }
 function HFChange({ r }: { r: RescueRow }) {
   return <>{fmtHF(r.hfBefore)}{r.hfAfter !== r.hfBefore && <> <ArrowRight className="inline h-3 w-3 text-dim" /> <span className="text-ok">{fmtHF(r.hfAfter)}</span></>}</>;
 }
-function Card({ r, you }: { r: RescueRow; you?: Address }) {
+function Card({ r, you, onOpen }: { r: RescueRow; you?: Address; onOpen: () => void }) {
   const isYou = you && r.user.toLowerCase() === you.toLowerCase();
   return (
-    <li className="rounded-2xl border border-edge bg-bg/50 p-3.5 text-[13px]">
+    <li className="cursor-pointer rounded-2xl border border-edge bg-bg/50 p-3.5 text-[13px] transition hover:border-white/20" onClick={onOpen}>
       <div className="flex items-center justify-between gap-2">
         <Badge tone={OUTCOME_TONE[r.outcome] ?? "warn"}>{r.outcome}</Badge>
         <span className="mono">{short(r.user)}{isYou && <span className="ml-1.5 font-sans text-[11px] font-bold text-rescue">you</span>}</span>
@@ -503,10 +536,10 @@ function Card({ r, you }: { r: RescueRow; you?: Address }) {
     </li>
   );
 }
-function Row({ r, you }: { r: RescueRow; you?: Address }) {
+function Row({ r, you, onOpen }: { r: RescueRow; you?: Address; onOpen: () => void }) {
   const isYou = you && r.user.toLowerCase() === you.toLowerCase();
   return (
-    <tr className="border-t border-edge">
+    <tr className="cursor-pointer border-t border-edge transition hover:bg-white/[0.025]" onClick={onOpen} tabIndex={0} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen())} title="Show details">
       <td className="px-2 py-3"><Badge tone={OUTCOME_TONE[r.outcome] ?? "warn"}>{r.outcome}</Badge></td>
       <td className="px-2 py-3"><span className="mono">{short(r.user)}</span>{isYou && <span className="ml-1.5 text-[11px] font-bold text-rescue">you</span>}</td>
       <td className="px-2 py-3 font-mono">{r.price ? fmtUsd(price8(r.price)) : "–"}</td>
@@ -516,5 +549,52 @@ function Row({ r, you }: { r: RescueRow; you?: Address }) {
       <td className="px-2 py-3"><TxLink side="reactive" hash={r.reactiveTx} /></td>
       <td className="px-2 py-3"><TxLink side="origin" hash={r.callbackTx} /></td>
     </tr>
+  );
+}
+
+const OUTCOME_EXPLAIN: Record<string, string> = {
+  Rescued: "The position was below its trigger. The vault repaid just enough debt to bring it back to the target health factor.",
+  "Partially rescued": "The position was below its trigger, but the remaining budget or reserve wasn't enough to reach the target. The vault repaid what it could.",
+  "Not needed": "When the callback arrived the position was already above its trigger, so nothing was spent.",
+  "No policy": "This address has no active policy, so the vault did nothing.",
+  Paused: "The policy is paused, so the vault did nothing.",
+  Expired: "The policy had expired, so the vault did nothing.",
+  "Budget used up": "The policy's lifetime spend cap was already reached, so nothing was spent. Raise the max spend to protect again.",
+  "No reserve": "The reserve was empty, so there was nothing to repay with. Fund the reserve to protect again.",
+  "Stale price": "The oracle price was too old to act on safely, so the vault refused.",
+  "Already liquidated": "The position had no debt left: it was already liquidated or repaid.",
+  "Repay failed": "The lending market rejected the repayment. The reserve was returned untouched.",
+};
+
+function RescueDetail({ r, you, onClose }: { r: RescueRow | null; you?: Address; onClose: () => void }) {
+  if (!r) return <Modal open={false} onClose={onClose} title="">{null}</Modal>;
+  const good = r.outcome === "Rescued" || r.outcome === "Partially rescued";
+  const tone = good ? "#22e39a" : r.outcome === "Not needed" ? "#e8ecf5" : "#ff3b3b";
+  const isYou = you && r.user.toLowerCase() === you.toLowerCase();
+  const hops: [string, "origin" | "reactive", Hex | undefined, string][] = [
+    ["1 · Price event", "origin", r.originTx, dep.origin.name], ["2 · Reactive", "reactive", r.reactiveTx, dep.simulated ? "Reactive (simulated)" : dep.reactive.name], ["3 · Vault callback", "origin", r.callbackTx, dep.origin.name]];
+  return (
+    <Modal open onClose={onClose} tone={tone} eyebrow="RESCUE DECISION" title={r.outcome}
+      footer={<button className="btn-ghost" onClick={onClose}>Close</button>}>
+      <p className="text-[14px] leading-relaxed text-[#c3cad6]">{OUTCOME_EXPLAIN[r.outcome] ?? "The vault recorded this decision."}</p>
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {[["Price", r.price ? fmtUsd(price8(r.price)) : "–"], ["Health factor", <HFChange key="h" r={r} />], ["Repaid", r.spent > 0n ? fmtUsdc(r.spent) : "–"]].map(([l, v]) => (
+          <div key={l as string} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3"><div className="eyebrow !text-[10px]">{l}</div><div className="mt-1 font-mono text-[15px] text-white">{v}</div></div>
+        ))}
+      </div>
+      <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.07] px-3 py-2.5 text-[13px]">
+        <span className="text-dim">Position</span><span className="flex items-center gap-1 font-mono">{short(r.user)}{isYou && <span className="ml-1 font-sans text-[11px] font-bold text-ok">you</span>}<CopyButton text={r.user} /></span>
+      </div>
+      <div className="mt-5 eyebrow">The three transactions</div>
+      <ol className="mt-2 space-y-2">
+        {hops.map(([label, side, hash, chain], i) => (
+          <li key={label} className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 text-[13px]" style={{ borderColor: `${["#ff3b3b", "#e8ecf5", "#22e39a"][i]}33` }}>
+            <div><div className="font-semibold text-white">{label}</div><div className="text-[11px] text-dim">{chain}</div></div>
+            <div className="flex items-center gap-1"><TxLink side={side} hash={hash} />{hash && <CopyButton text={hash} />}</div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-4 flex items-center justify-between text-[11px] text-dim"><span>Event id</span><span className="flex items-center gap-1 font-mono">{short(r.eventId, 10)}<CopyButton text={r.eventId} /></span></div>
+    </Modal>
   );
 }
