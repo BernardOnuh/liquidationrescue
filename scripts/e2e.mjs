@@ -78,7 +78,7 @@ const alice = await browser("borrower");
 const operator = await browser("operator");
 const log = s => console.log("✓ " + s);
 try {
-  await alice.go("/");
+  await alice.go("/app");
   await connect(alice, "Borrower (Alice)");
   let t = await alice.waitFor("Open position|Health factor");
   if (/Open position/.test(t)) {
@@ -108,7 +108,7 @@ try {
   log("reactive contract tracks the user");
 
   const before = Number((await alice.text()).match(/Decisions\s+(\d+)/i)?.[1] ?? 0);
-  await operator.go("/");
+  await operator.go("/app");
   await connect(operator, "Price feed operator");
   await operator.waitFor("Publish a price");
   await operator.click("-10%");

@@ -74,6 +74,13 @@ Why Reactive Omni: the rescue is driven by the price event itself, not by pollin
 | Local chain (Reactive simulated by a relayer) | about 2 s | `NETWORK=local npm run latency`; not Reactive Network, for testing the measurement only |
 | Base Sepolia ↔ Lasna | pending testnet deploy | `NETWORK=testnet npm run latency` |
 
+## Website
+
+`web/` serves two pages:
+
+- **`/`**, the homepage: a liquid-metal hero (Three.js / React Three Fiber, custom GLSL), the problem as a scroll-driven price crash, the Base Sepolia → Lasna → Base Sepolia loop, an **interactive crash simulator** that runs the vault's own decision logic in the browser (`web/src/lib/rescue-sim.ts` mirrors `ProtectionVault._rescue` and `_repayToReach`; no transactions), polling vs event-driven timing, and the policy controls. Measured latency is shown only when `web/src/deployments/latency-testnet.json` exists. Reduced motion is respected throughout.
+- **`/app`**, the dashboard below.
+
 ## Dashboard
 
 ```bash
@@ -81,7 +88,7 @@ Why Reactive Omni: the rescue is driven by the price event itself, not by pollin
 cd contracts && npx hardhat node --hostname 127.0.0.1 --port 8546      # terminal 1
 npx hardhat run scripts/dev-local.ts --network local                   # writes web/src/deployments/local.json
 npx hardhat run scripts/local-relayer.ts --network local               # terminal 2
-cd ../web && npm install && npm run dev                                # http://127.0.0.1:3200
+cd ../web && npm install && npm run dev                                # homepage http://127.0.0.1:3200, dashboard /app
 
 node scripts/e2e.mjs http://127.0.0.1:3200 ./shots                     # browser e2e (E2E_WIDTH=390 for phone size)
 

@@ -42,3 +42,36 @@ body { background: var(--color-bg); color: var(--color-text); @apply antialiased
 
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(255 122 69 / 0.5); } 100% { box-shadow: 0 0 0 10px rgb(255 122 69 / 0); } }
 @utility live-dot { @apply inline-block h-2 w-2 rounded-full bg-ok; animation: pulse-ring 1.6s ease-out infinite; }
+
+/* ---------- homepage ---------- */
+html { scroll-behavior: smooth; }
+@utility section-title { @apply text-[38px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[56px]; }
+@utility cta-primary {
+  @apply inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-[#03121a] transition;
+  background: linear-gradient(120deg, #a5f3fc, #22d3ee 45%, #38bdf8);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.25) inset, 0 18px 50px -14px rgb(34 211 238 / 0.75);
+}
+@utility cta-ghost { @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-6 py-3.5 text-[15px] font-semibold backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.08]; }
+@utility cta-danger {
+  @apply inline-flex items-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white transition disabled:cursor-wait disabled:opacity-70;
+  background: linear-gradient(120deg, #ff7a45, #f43f5e);
+  box-shadow: 0 16px 44px -14px rgb(244 63 94 / 0.8);
+}
+.landing .cta-primary:hover { filter: brightness(1.08); }
+@keyframes liquid-flow { to { stroke-dashoffset: -64; } }
+.liquid-flow { stroke-dasharray: 22 10; animation: liquid-flow 1.6s linear infinite; }
+@keyframes stream { to { background-position: 200% 0; } }
+.liquid-stream { background: linear-gradient(90deg, rgb(34 211 238 / 0.05), rgb(103 232 249 / 0.7), rgb(56 189 248 / 0.25), rgb(103 232 249 / 0.7), rgb(34 211 238 / 0.05)); background-size: 200% 100%; animation: stream 2.4s linear infinite; filter: blur(0.5px); }
+.vault { background: linear-gradient(140deg, rgb(103 232 249 / 0.55), rgb(255 255 255 / 0.08) 35%, rgb(56 189 248 / 0.25) 70%, rgb(255 255 255 / 0.06)); }
+@keyframes vault-liquid { 0% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(4%, -3%) rotate(8deg); } 100% { transform: translate(0, 0) rotate(0); } }
+.vault-liquid { background: radial-gradient(40% 35% at 30% 20%, rgb(34 211 238 / 0.22), transparent 70%), radial-gradient(35% 30% at 80% 80%, rgb(56 189 248 / 0.18), transparent 70%); animation: vault-liquid 14s ease-in-out infinite; }
+.rule { transition: border-color .5s, background .5s, box-shadow .5s; }
+.rule .rule-icon, .rule .rule-value { transition: color .5s, background .5s; }
+.rule-on { border-color: rgb(103 232 249 / 0.35); background: rgb(34 211 238 / 0.06); box-shadow: 0 0 40px -18px rgb(34 211 238 / 0.8); }
+.rule-on .rule-icon { color: #67e8f9; background: rgb(34 211 238 / 0.12); }
+.rule-on .rule-value { color: #cffafe; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .liquid-flow, .liquid-stream, .vault-liquid { animation: none; }
+  .rule { transition: none; }
+}
