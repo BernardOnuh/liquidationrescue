@@ -27,23 +27,66 @@ export function Landing({ latency }: { latency: LatencySummary | null }) {
   );
 }
 
-function Nav() {
+const LINKS: [string, string][] = [["problem", "The risk"], ["how", "How it works"], ["simulate", "Try a crash"], ["speed", "Speed"]];
+
+/** The mark: a shield holding one red candle (the crash) and one green candle (the rescue). */
+function Mark({ className = "h-8 w-8" }: { className?: string }) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.05] bg-[#04060d]/60 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <img src="/logo.svg" alt="" className="h-7 w-7" />
-          <span>LiquidationRescue</span>
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <path d="M16 2.5 27 6.6v8.1c0 7.3-4.7 12.2-11 14.8C9.7 26.9 5 22 5 14.7V6.6Z" fill="rgb(34 227 154 / 0.1)" stroke="#22e39a" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M12.2 9.5v12.5" stroke="#ff3b3b" strokeWidth="1.2" strokeLinecap="round" /><rect x="10.4" y="11.5" width="3.6" height="7.5" rx="0.8" fill="#ff3b3b" />
+      <path d="M19.8 8v11.5" stroke="#22e39a" strokeWidth="1.2" strokeLinecap="round" /><rect x="18" y="9.5" width="3.6" height="7" rx="0.8" fill="#22e39a" />
+    </svg>
+  );
+}
+
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+    // highlight the section in the middle of the screen
+    const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && setActive(e.target.id)), { rootMargin: "-45% 0px -50% 0px" });
+    LINKS.forEach(([id]) => { const el = document.getElementById(id); if (el) io.observe(el); });
+    return () => { window.removeEventListener("scroll", onScroll); io.disconnect(); };
+  }, []);
+  return (
+    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5">
+      <div className={`mx-auto flex max-w-6xl items-center justify-between rounded-full border py-2 pl-3 pr-2 transition-all duration-300 sm:pl-4 ${scrolled || open ? "border-white/12 bg-[#05070c]/85 shadow-[0_18px_50px_-24px_rgb(0_0_0/0.9)] backdrop-blur-xl" : "border-white/[0.07] bg-[#05070c]/40 backdrop-blur-md"}`}>
+        <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
+          <Mark />
+          <span className="font-display text-[17px] font-bold tracking-[-0.02em] text-white">Liquidation<span className="text-bull">Rescue</span></span>
         </Link>
-        <nav className="hidden items-center gap-7 text-[13px] text-dim md:flex">
-          <a href="#problem" className="hover:text-text">The risk</a>
-          <a href="#how" className="hover:text-text">How it works</a>
-          <a href="#simulate" className="hover:text-text">Try a crash</a>
-          <a href="#speed" className="hover:text-text">Speed</a>
-          <a href={REPO} className="hover:text-text">GitHub</a>
+        <nav className="hidden items-center gap-1 md:flex">
+          {LINKS.map(([id, label]) => (
+            <a key={id} href={`#${id}`} className={`relative rounded-full px-3.5 py-2 text-[14px] font-medium transition ${active === id ? "bg-white/[0.07] text-white" : "text-[#c3cad6] hover:text-white"}`}>
+              {active === id && <span className="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-bull" />}
+              <span className={active === id ? "pl-1.5" : ""}>{label}</span>
+            </a>
+          ))}
+          <a href={REPO} className="rounded-full px-3.5 py-2 text-[14px] font-medium text-[#c3cad6] transition hover:text-white">GitHub</a>
         </nav>
-        <Link href="/app" className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-[13px] font-semibold backdrop-blur-md transition hover:border-bull/50 hover:bg-bull/10">Launch app</Link>
+        <div className="flex items-center gap-2">
+          <span className="hidden rounded-full border border-white/12 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.12em] text-[#c3cad6] lg:inline">TESTNET</span>
+          <Link href="/app" className="hidden items-center gap-1.5 rounded-full bg-bull px-4 py-2 text-[14px] font-semibold text-[#03150d] transition hover:brightness-110 sm:inline-flex">Launch app <ArrowRight className="h-3.5 w-3.5" /></Link>
+          <button onClick={() => setOpen(o => !o)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-full border border-white/12 md:hidden">
+            <span className="relative block h-3 w-4">
+              <span className={`absolute left-0 h-[1.5px] w-4 bg-white transition-all ${open ? "top-1.5 rotate-45" : "top-0"}`} />
+              <span className={`absolute left-0 h-[1.5px] w-4 bg-white transition-all ${open ? "top-1.5 -rotate-45" : "top-3"}`} />
+            </span>
+          </button>
+        </div>
       </div>
+      {open && (
+        <div className="mx-auto mt-2 max-w-6xl rounded-3xl border border-white/12 bg-[#05070c]/95 p-2 backdrop-blur-xl md:hidden">
+          {[...LINKS, [REPO, "GitHub"] as [string, string]].map(([id, label]) => (
+            <a key={id} href={id.startsWith("http") ? id : `#${id}`} onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-[16px] font-medium text-[#c3cad6] hover:bg-white/[0.05] hover:text-white">{label}</a>
+          ))}
+          <Link href="/app" onClick={() => setOpen(false)} className="mt-1 flex items-center justify-center gap-1.5 rounded-2xl bg-bull px-4 py-3 text-[16px] font-semibold text-[#03150d]">Launch app <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+      )}
     </header>
   );
 }
