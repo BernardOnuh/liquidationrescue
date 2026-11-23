@@ -69,6 +69,10 @@ html { scroll-behavior: smooth; }
 .rule-on { border-color: rgb(34 227 154 / 0.35); background: rgb(34 227 154 / 0.06); box-shadow: 0 0 40px -18px rgb(34 227 154 / 0.7); }
 .rule-on .rule-icon { color: #22e39a; background: rgb(34 227 154 / 0.12); }
 .rule-on .rule-value { color: #ffffff; }
+@keyframes packet-x { from { left: 8%; } to { left: 88%; } }
+@keyframes packet-y { from { top: 8%; } to { top: 88%; } }
+.packet { animation: packet-y 1.1s cubic-bezier(.5,0,.3,1) both; }
+@media (min-width: 768px) { .packet { animation-name: packet-x; } }
 @keyframes type-in { from { max-width: 0; } to { max-width: calc(var(--chars) * 1ch); } }
 .type-in { display: inline-block; overflow: hidden; white-space: nowrap; vertical-align: bottom; animation: type-in 0.9s steps(40, end) both; }
 @keyframes liq-pulse { 0%, 100% { stroke-width: 1.2; opacity: 1; } 50% { stroke-width: 3; opacity: 0.55; } }

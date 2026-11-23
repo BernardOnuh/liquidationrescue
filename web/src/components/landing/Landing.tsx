@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, Ban, CalendarClock, Fingerprint, Gauge, PauseCircle, PiggyBank, Target, Wallet } from "lucide-react";
@@ -253,94 +253,73 @@ function CrashChart() {
   );
 }
 
-// ---------- 3. The solution: detect → react → rescue ----------
+// ---------- 3. The solution: one rescue loop, played on its own ----------
+// phase: 0 detect · 1 event travels · 2 react · 3 callback travels · 4 rescue
+const HOPS = [
+  { chain: "BASE SEPOLIA", title: "Price feed", fn: "PriceUpdated(WETH, price)", detail: ["WETH", "$2,412 → $2,323", "▼ 3.7%"], tone: "#ff3b3b", step: "01 DETECT" },
+  { chain: "REACTIVE LASNA", title: "Reactive contract", fn: "react() → RescueRequested", detail: ["Protected users", "1 at risk", "callback requested"], tone: "#e8ecf5", step: "02 REACT" },
+  { chain: "BASE SEPOLIA", title: "ProtectionVault", fn: "onRiskEvent() → repay", detail: ["Repaid", "722 USDC", "HF 1.16 → 1.50"], tone: "#22e39a", step: "03 RESCUE" },
+];
+const LOG: [string, string, string][] = [
+  ["#ff3b3b", "base-sepolia", "PriceUpdated(WETH, $2,323): the event itself is the trigger"],
+  ["#e8ecf5", "lasna       ", "react() finds the position below its trigger → RescueRequested → callback"],
+  ["#22e39a", "base-sepolia", "ProtectionVault.onRiskEvent: rechecks, repays 722 USDC, HF 1.16 → 1.50"],
+];
+
 function Solution() {
   const root = useRef<HTMLElement>(null);
-  const [stage, setStage] = useState(0);
+  const [phase, setPhase] = useState(0);
   const [run, setRun] = useState(0);
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
-      const p1 = root.current!.querySelector<SVGPathElement>("#hop1")!, p2 = root.current!.querySelector<SVGPathElement>("#hop2")!;
-      const pulse = root.current!.querySelector<SVGCircleElement>("#pulse")!, halo = root.current!.querySelector<SVGCircleElement>("#pulse-halo")!;
-      const L1 = p1.getTotalLength(), L2 = p2.getTotalLength();
-      const trail = Array.from(root.current!.querySelectorAll<SVGCircleElement>(".trail"));
-      const at = (p: number): [DOMPoint, string] => {
-        if (p < 0.3) return [p1.getPointAtLength(0), "#ff3b3b"];
-        if (p < 0.62) return [p1.getPointAtLength(((p - 0.3) / 0.32) * L1), p < 0.5 ? "#ff3b3b" : "#e8ecf5"];
-        return [p2.getPointAtLength(Math.min(1, (p - 0.62) / 0.3) * L2), "#22e39a"];
-      };
-      const place = (p: number) => {
-        const [pt, col] = at(p);
-        for (const c of [pulse, halo]) { c.setAttribute("cx", String(pt.x)); c.setAttribute("cy", String(pt.y)); c.setAttribute("fill", col); }
-        const moving = (p > 0.3 && p < 0.62) || (p > 0.62 && p < 0.92);
-        trail.forEach((c, k) => {
-          const [tp] = at(Math.max(p > 0.62 ? 0.62 : 0.3, p - (k + 1) * 0.012));
-          c.setAttribute("cx", String(tp.x)); c.setAttribute("cy", String(tp.y)); c.setAttribute("fill", col);
-          c.setAttribute("opacity", moving ? String(0.55 - k * 0.1) : "0");
-        });
-        setStage(p < 0.3 ? 0 : p < 0.62 ? 1 : 2);
-      };
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        // The signal travels on its own while the section is on screen, then the loop restarts.
-        const st = { p: 0 };
         const tl = gsap.timeline({ repeat: -1, paused: true })
-          .call(() => setRun(r => r + 1))
-          .to(st, { p: 1, duration: 6.5, ease: "none", onUpdate: () => place(st.p) })
-          .to({}, { duration: 1.8 })
-          .call(() => { st.p = 0; place(0); });
+          .call(() => { setRun(r => r + 1); setPhase(0); })
+          .call(() => setPhase(1), [], 1.8).call(() => setPhase(2), [], 3.0)
+          .call(() => setPhase(3), [], 4.8).call(() => setPhase(4), [], 6.0)
+          .to({}, { duration: 3.2 }, 6.0);
         ScrollTrigger.create({ trigger: root.current, start: "top 75%", end: "bottom 20%", onToggle: s => (s.isActive ? tl.play() : tl.pause()) });
       });
-      mm.add("(prefers-reduced-motion: reduce)", () => place(1));
-      place(0);
+      mm.add("(prefers-reduced-motion: reduce)", () => setPhase(4));
     }, root);
     return () => ctx.revert();
   }, []);
-  const stages = [
-    { k: "DETECT", t: "A price event on Base Sepolia", d: "The oracle publishes a lower price. That event is the trigger: nobody has to notice it." },
-    { k: "REACT", t: "Reactive Network on Lasna", d: "A reactive contract subscribed to the price feed runs react(), finds protected positions and requests a callback." },
-    { k: "RESCUE", t: "ProtectionVault on Base Sepolia", d: "The vault rechecks the position and repays just enough debt to reach your target health factor, within your limits." },
-  ];
+  const cardOn = (i: number) => phase >= i * 2;
+  const current = phase === 4 ? 2 : Math.floor(phase / 2) + (phase % 2);
   return (
-    <section id="how" ref={root} className="relative">
-      <div className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden py-24">
-        <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
-          <Eyebrow>The solution · We react</Eyebrow>
-          <h2 className="section-title reveal max-w-3xl">The moment risk appears, protection begins.</h2>
-          <p className="reveal mt-5 max-w-2xl text-[17px] leading-relaxed text-dim">LiquidationRescue uses Reactive Smart Contracts to respond to on-chain price events and initiate a calculated rescue, without relying on periodic polling.</p>
-          <svg viewBox="0 0 1200 300" className="mt-10 w-full">
-            <defs>
-              <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stopColor="#ff3b3b" /><stop offset="1" stopColor="#e8ecf5" /></linearGradient>
-              <linearGradient id="g2" x1="0" x2="1"><stop offset="0" stopColor="#e8ecf5" /><stop offset="1" stopColor="#22e39a" /></linearGradient>
-            </defs>
-            {[["#hop1", "M300 150 H490", "url(#g1)"], ["#hop2", "M710 150 H900", "url(#g2)"]].map(([id, d, s]) => (
-              <g key={id}>
-                <path d={d} stroke="rgb(255 255 255 / 0.08)" strokeWidth="10" fill="none" strokeLinecap="round" />
-                <path id={id.slice(1)} d={d} stroke={s} strokeWidth="2.5" fill="none" className="liquid-flow" />
-              </g>
-            ))}
-            <Node x={190} chain="BASE SEPOLIA" title="Price feed" line="PriceUpdated event" tone="#ff3b3b" on={stage >= 0} />
-            <Node x={600} chain="REACTIVE LASNA" title="react()" line="RescueRequested" tone="#e8ecf5" on={stage >= 1} />
-            <Node x={1010} chain="BASE SEPOLIA" title="ProtectionVault" line="onRiskEvent → repay" tone="#22e39a" on={stage >= 2} />
-            {[0, 1, 2, 3, 4].map(k => <circle key={k} className="trail" r={5 - k * 0.7} opacity="0" />)}
-            <circle id="pulse-halo" r="0" opacity="0" />
-            <circle id="pulse" r="6.5" />
-          </svg>
-          <div className="mt-6 rounded-2xl border border-white/10 bg-[#05070c]/80 px-5 py-4 font-mono text-[12.5px] leading-7">
-            {[["#ff3b3b", "base-sepolia", "PriceUpdated(WETH, ↓ price): the event is the trigger"], ["#e8ecf5", "lasna", "react() → RescueRequested(eventId, user) → callback"], ["#22e39a", "base-sepolia", "ProtectionVault.onRiskEvent → repay → HF back to target"]].map(([c, chain, msg], i) => (
-              <div key={`${run}-${i}`} className={`flex gap-3 transition-opacity duration-300 ${stage >= i ? "opacity-100" : "opacity-0"}`}>
-                <span style={{ color: c }}>{chain.padEnd(12, "\u00a0")}</span>
-                <span className={stage >= i ? "type-in text-[#c3cad6]" : "text-[#c3cad6]"} style={{ ["--chars" as string]: msg.length }}>{msg}</span>
-              </div>
+    <section id="how" ref={root} className="relative py-28">
+      <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+        <Eyebrow>The solution · We react</Eyebrow>
+        <h2 className="section-title reveal max-w-3xl">The moment risk appears, protection begins.</h2>
+        <p className="reveal mt-5 max-w-2xl text-[17px] leading-relaxed text-[#c3cad6]">LiquidationRescue uses Reactive Smart Contracts to respond to on-chain price events and initiate a calculated rescue, without relying on periodic polling.</p>
+
+        <div className="reveal mt-12 overflow-hidden rounded-[28px] border border-white/10 bg-[#05070c]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-3.5 sm:px-7">
+            <div className="flex items-center gap-2.5 font-mono text-[11.5px] tracking-[0.14em] text-[#c3cad6]"><span className="h-2 w-2 animate-pulse rounded-full bg-bull" />RESCUE LOOP</div>
+            <div className="flex gap-1.5">
+              {HOPS.map((h, i) => (
+                <span key={h.step} className="rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.1em] transition-colors duration-500" style={current === i ? { background: `${h.tone}1f`, color: h.tone } : { color: "#6b7280" }}>{h.step}</span>
+              ))}
+            </div>
+            <span className="font-mono text-[11px] text-[#6b7280]">example values</span>
+          </div>
+
+          <div className="grid items-stretch gap-0 px-5 py-8 sm:px-7 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+            {HOPS.map((h, i) => (
+              <Fragment key={i}>
+                <LoopCard hop={h} on={cardOn(i)} active={current === i} />
+                {i < 2 && <Track active={phase === i * 2 + 1} done={phase > i * 2 + 1} from={h.tone} to={HOPS[i + 1].tone} label={i === 0 ? "event" : "callback"} run={run} />}
+              </Fragment>
             ))}
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {stages.map((s, i) => (
-              <div key={s.k} className={`rounded-3xl border p-5 transition-all duration-500 ${stage === i ? "border-bull/40 bg-bull/[0.06] shadow-[0_0_60px_-20px_rgb(34_227_154/0.6)]" : "border-white/10 bg-white/[0.02] opacity-60"}`}>
-                <div className="font-mono text-[12px] tracking-[0.2em]" style={{ color: ["#ff3b3b", "#e8ecf5", "#22e39a"][i] }}>0{i + 1} · {s.k}</div>
-                <div className="mt-2 text-[17px] font-semibold">{s.t}</div>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-dim">{s.d}</p>
+
+          <div className="border-t border-white/[0.07] bg-black/30 px-5 py-4 font-mono text-[12.5px] leading-7 sm:px-7">
+            {LOG.map(([c, chain, msg], i) => (
+              <div key={`${run}-${i}`} className={`flex gap-3 transition-opacity duration-300 ${cardOn(i) ? "opacity-100" : "opacity-0"}`}>
+                <span className="shrink-0 whitespace-pre" style={{ color: c }}>{chain}</span>
+                <span className={`min-w-0 truncate text-[#c3cad6] ${cardOn(i) ? "type-in" : ""}`} style={{ ["--chars" as string]: msg.length }}>{msg}</span>
               </div>
             ))}
           </div>
@@ -350,15 +329,33 @@ function Solution() {
   );
 }
 
-function Node({ x, chain, title, line, tone, on }: { x: number; chain: string; title: string; line: string; tone: string; on: boolean }) {
+function LoopCard({ hop, on, active }: { hop: (typeof HOPS)[number]; on: boolean; active: boolean }) {
   return (
-    <g style={{ transition: "opacity .5s", opacity: on ? 1 : 0.4 }}>
-      <rect x={x - 110} y={98} width={220} height={104} rx="16" fill="#06080e" stroke={on ? tone : "rgb(255 255 255 / 0.14)"} strokeWidth={on ? 1.8 : 1.2} style={{ transition: "stroke .5s" }} />
-      <rect x={x - 110} y={98} width={220} height={4} rx="2" fill={tone} opacity={on ? 1 : 0.3} />
-      <text x={x - 92} y={130} fill={tone} fontSize="11" fontWeight="600" letterSpacing="1.6" fontFamily="JetBrains Mono, monospace">{chain}</text>
-      <text x={x - 92} y={160} fill="#ffffff" fontSize="20" fontWeight="700" fontFamily="Space Grotesk, Inter Tight, sans-serif">{title}</text>
-      <text x={x - 92} y={184} fill="#c3cad6" fontSize="12" fontFamily="JetBrains Mono, monospace">{line}</text>
-    </g>
+    <div className="rounded-2xl border p-5 transition-all duration-500" style={{ borderColor: on ? `${hop.tone}${active ? "99" : "40"}` : "rgb(255 255 255 / 0.08)", background: on ? `${hop.tone}0d` : "rgb(255 255 255 / 0.015)", boxShadow: active ? `0 0 60px -22px ${hop.tone}` : "none", opacity: on ? 1 : 0.45 }}>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] font-semibold tracking-[0.16em]" style={{ color: hop.tone }}>{hop.chain}</span>
+        <span className={`h-2 w-2 rounded-full transition-all duration-500 ${active ? "scale-125" : ""}`} style={{ background: on ? hop.tone : "rgb(255 255 255 / 0.15)", boxShadow: active ? `0 0 12px ${hop.tone}` : "none" }} />
+      </div>
+      <div className="mt-3 font-display text-[22px] font-bold tracking-[-0.02em] text-white">{hop.title}</div>
+      <div className="mt-1 font-mono text-[12.5px] text-[#c3cad6]">{hop.fn}</div>
+      <div className="mt-5 grid grid-cols-[auto_1fr] items-baseline gap-x-3 border-t border-white/[0.07] pt-4">
+        <span className="text-[12px] text-[#8c96ab]">{hop.detail[0]}</span>
+        <span className="text-right font-mono text-[15px] font-semibold text-white">{hop.detail[1]}</span>
+        <span />
+        <span className="text-right font-mono text-[12px]" style={{ color: hop.tone }}>{hop.detail[2]}</span>
+      </div>
+    </div>
+  );
+}
+
+function Track({ active, done, from, to, label, run }: { active: boolean; done: boolean; from: string; to: string; label: string; run: number }) {
+  return (
+    <div className="relative flex min-h-16 items-center justify-center md:w-28 lg:w-36">
+      {/* the rail: horizontal on wide screens, vertical when the cards stack */}
+      <div className="absolute inset-x-1/2 inset-y-2 w-px -translate-x-1/2 md:inset-x-3 md:inset-y-auto md:top-1/2 md:h-px md:w-auto md:translate-x-0" style={{ background: done || active ? `linear-gradient(90deg, ${from}, ${to})` : "rgb(255 255 255 / 0.1)" }} />
+      {active && <span key={run} className="packet absolute left-1/2 -ml-[5px] h-2.5 w-2.5 rounded-full md:top-1/2 md:-mt-[5px] md:ml-0" style={{ background: to, boxShadow: `0 0 14px ${to}, -14px 0 10px -4px ${from}` }} />}
+      <span className="relative rounded-full border border-white/10 bg-[#05070c] px-2.5 py-0.5 font-mono text-[10.5px] tracking-[0.12em] text-[#8c96ab]">{label}</span>
+    </div>
   );
 }
 
