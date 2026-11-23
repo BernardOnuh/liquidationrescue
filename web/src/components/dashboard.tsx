@@ -217,6 +217,7 @@ function PolicyPanel({ user }: { user?: Address }) {
   const [days, setDays] = useState("7");
   const [amount, setAmount] = useState("300");
   const [editing, setEditing] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false); // hooks before the early return
   if (!user || !a || !m) return null;
 
   const p = a.policy;
@@ -244,7 +245,6 @@ function PolicyPanel({ user }: { user?: Address }) {
   const withdraw = () => tx.run([{ label: "Withdraw unused reserve", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "withdrawUnused", args: [parseUnits(amount || "0", 6)] }) }]);
   const setPaused = (paused: boolean) => tx.run([{ label: paused ? "Pause policy" : "Resume policy", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "setPaused", args: [paused] }) }]);
   const revoke = () => tx.run([{ label: "Revoke policy", send: () => writeContractAsync({ address: dep.vault!, abi: ProtectionVaultAbi, functionName: "revokePolicy" }) }]);
-  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   const expired = active && Number(p.expiry) < Date.now() / 1000;
   const status = !active ? <Badge>No policy</Badge> : expired ? <Badge tone="danger">Expired</Badge> : p.paused ? <Badge tone="warn">Paused</Badge> : <Badge tone="ok"><ShieldCheck className="h-3 w-3" />Protected</Badge>;
