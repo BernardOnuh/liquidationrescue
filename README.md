@@ -79,8 +79,9 @@ Needs a testnet wallet with Base Sepolia ETH and Lasna REACT (Reactive's faucet:
 
 ```bash
 cd contracts
-export DESTINATION_PRIVATE_KEY=...   # testnet-only wallet, never commit
-export REACTIVE_PRIVATE_KEY=...
+npm run wallet                      # makes a testnet-only wallet in contracts/.env (git-ignored), prints its address and balances
+# fund it: Base Sepolia ETH and Ethereum Sepolia ETH from faucets, then:
+npm run faucet                      # sends 0.05 Sepolia ETH to Reactive's faucet for 5 Lasna REACT (REACT_FAUCET_ETH to change)
 STEP=origin   npx hardhat run scripts/deploy.ts --network baseSepolia
 STEP=reactive npx hardhat run scripts/deploy.ts --network lasna
 STEP=vault    npx hardhat run scripts/deploy.ts --network baseSepolia

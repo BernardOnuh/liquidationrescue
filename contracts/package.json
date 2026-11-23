@@ -5,7 +5,9 @@
   "description": "LiquidationRescue contracts: policy-bounded, event-triggered rescue of lending positions via Reactive Network Omni",
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "wallet": "hardhat run scripts/wallet.ts",
+    "faucet": "hardhat run scripts/faucet.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",

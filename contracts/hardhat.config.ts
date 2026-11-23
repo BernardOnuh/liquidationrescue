@@ -1,7 +1,9 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 
-// Keys come from the environment and are never committed. Use dedicated testnet wallets only.
+// Keys come from the environment, or from contracts/.env (git-ignored, written by `npm run wallet`). Never committed.
+// Use dedicated testnet wallets only.
+try { process.loadEnvFile(__dirname + "/.env"); } catch { /* no .env: keys may already be in the environment */ }
 const destKey = process.env.DESTINATION_PRIVATE_KEY ? [process.env.DESTINATION_PRIVATE_KEY] : [];
 const reactiveKey = process.env.REACTIVE_PRIVATE_KEY ? [process.env.REACTIVE_PRIVATE_KEY] : [];
 
