@@ -47,23 +47,23 @@ export function Speed({ latency }: { latency: LatencySummary | null }) {
         <div className="mt-10 grid overflow-hidden rounded-[32px] border border-white/10 md:grid-cols-2">
           <Lane title="Polling keeper" sub={`checks every ${interval} s`} tone="orange">
             <Track pct={pct} t={t} dropped={dropped}>
-              {polls.map(p => <span key={p} className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full transition ${t >= p && t < p + 0.5 ? "scale-150 bg-orange-300 shadow-[0_0_16px_#fdba74]" : "bg-orange-300/30"}`} style={{ left: pct(p) }} />)}
-              {seen !== null && dropped && <span className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-orange-400/40" style={{ left: pct(DROP), width: pct(Math.min(t, seen) - DROP) }} />}
+              {polls.map(p => <span key={p} className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full transition ${t >= p && t < p + 0.5 ? "scale-150 bg-bear shadow-[0_0_16px_#ff3b3b]" : "bg-bear/30"}`} style={{ left: pct(p) }} />)}
+              {seen !== null && dropped && <span className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-bear/40" style={{ left: pct(DROP), width: pct(Math.min(t, seen) - DROP) }} />}
             </Track>
             <p className="mt-4 text-[14px] text-dim">
-              {seen === null ? <>The next check is after this window: the drop goes unseen for over {Math.round(CYCLE - DROP)} s.</> : <>Sees the drop at its next check, <span className="font-mono text-orange-200">{(seen - DROP).toFixed(1)} s</span> later in this example, and up to <span className="font-mono text-orange-200">{interval} s</span> in the worst case, before any transaction.</>}
+              {seen === null ? <>The next check is after this window: the drop goes unseen for over {Math.round(CYCLE - DROP)} s.</> : <>Sees the drop at its next check, <span className="font-mono text-bear">{(seen - DROP).toFixed(1)} s</span> later in this example, and up to <span className="font-mono text-bear">{interval} s</span> in the worst case, before any transaction.</>}
             </p>
             <label className="mt-4 flex items-center gap-3 text-[12px] text-dim">Polling interval
-              <input type="range" min={2} max={30} value={interval} onChange={e => setInterval_(Number(e.target.value))} className="flex-1 accent-orange-400" />
+              <input type="range" min={2} max={30} value={interval} onChange={e => setInterval_(Number(e.target.value))} className="flex-1 accent-bear" />
               <span className="w-10 font-mono text-text">{interval} s</span>
             </label>
           </Lane>
           <Lane title="LiquidationRescue" sub="reacts to the emitted event" tone="cyan">
             <Track pct={pct} t={t} dropped={dropped}>
               <span className="liquid-stream absolute inset-y-[38%] left-0 right-0 rounded-full" />
-              {dropped && <span className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300 shadow-[0_0_24px_#67e8f9]" style={{ left: pct(DROP) }} />}
+              {dropped && <span className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-bull shadow-[0_0_24px_#22e39a]" style={{ left: pct(DROP) }} />}
             </Track>
-            <p className="mt-4 text-[14px] text-dim">No polling gap: the price event itself starts the loop: <span className="font-mono text-cyan-200">event → react() → vault callback</span>.</p>
+            <p className="mt-4 text-[14px] text-dim">No polling gap: the price event itself starts the loop: <span className="font-mono text-bull">event → react() → vault callback</span>.</p>
           </Lane>
         </div>
 
@@ -76,9 +76,9 @@ export function Speed({ latency }: { latency: LatencySummary | null }) {
               <div className="text-[11px] uppercase tracking-[0.14em] text-dim">Verified transactions</div>
               {latency.example ? (
                 <ul className="mt-2 space-y-1 text-[13px]">
-                  <li><a className="inline-flex items-center gap-1 text-orange-200 hover:underline" href={`${latency.explorers.origin}/tx/${latency.example.origin}`}>Price event <ExternalLink className="h-3 w-3" /></a></li>
-                  <li><a className="inline-flex items-center gap-1 text-violet-200 hover:underline" href={`${latency.explorers.reactive}/tx/${latency.example.reactive}`}>Reactive (Lasna) <ExternalLink className="h-3 w-3" /></a></li>
-                  <li><a className="inline-flex items-center gap-1 text-cyan-200 hover:underline" href={`${latency.explorers.origin}/tx/${latency.example.callback}`}>Vault rescue <ExternalLink className="h-3 w-3" /></a></li>
+                  <li><a className="inline-flex items-center gap-1 text-bear hover:underline" href={`${latency.explorers.origin}/tx/${latency.example.origin}`}>Price event <ExternalLink className="h-3 w-3" /></a></li>
+                  <li><a className="inline-flex items-center gap-1 text-white hover:underline" href={`${latency.explorers.reactive}/tx/${latency.example.reactive}`}>Reactive (Lasna) <ExternalLink className="h-3 w-3" /></a></li>
+                  <li><a className="inline-flex items-center gap-1 text-bull hover:underline" href={`${latency.explorers.origin}/tx/${latency.example.callback}`}>Vault rescue <ExternalLink className="h-3 w-3" /></a></li>
                 </ul>
               ) : <div className="mt-2 text-[13px] text-dim">-</div>}
               <div className="mt-2 text-[11px] text-dim">{latency.completed} rescues measured · {new Date(latency.measuredAt).toUTCString().slice(5, 16)}</div>
@@ -101,8 +101,8 @@ export function Speed({ latency }: { latency: LatencySummary | null }) {
 
 function Lane({ title, sub, tone, children }: { title: string; sub: string; tone: "orange" | "cyan"; children: React.ReactNode }) {
   return (
-    <div className={`p-6 sm:p-8 ${tone === "orange" ? "bg-[linear-gradient(160deg,rgb(255_90_31/0.08),transparent_60%)]" : "border-t border-white/10 bg-[linear-gradient(160deg,rgb(34_211_238/0.09),transparent_60%)] md:border-l md:border-t-0"}`}>
-      <div className="flex items-baseline justify-between"><div className="text-[19px] font-semibold">{title}</div><div className={`font-mono text-[12px] ${tone === "orange" ? "text-orange-300" : "text-cyan-300"}`}>{sub}</div></div>
+    <div className={`p-6 sm:p-8 ${tone === "orange" ? "bg-[linear-gradient(160deg,rgb(255_59_59/0.08),transparent_60%)]" : "border-t border-white/10 bg-[linear-gradient(160deg,rgb(34_227_154/0.09),transparent_60%)] md:border-l md:border-t-0"}`}>
+      <div className="flex items-baseline justify-between"><div className="text-[19px] font-semibold">{title}</div><div className={`font-mono text-[12px] ${tone === "orange" ? "text-bear" : "text-bull"}`}>{sub}</div></div>
       {children}
     </div>
   );
@@ -112,8 +112,8 @@ function Track({ children, pct, t, dropped }: { children: React.ReactNode; pct: 
   return (
     <div className="relative mt-6 h-16">
       <div className="absolute inset-x-0 top-1/2 h-px bg-white/10" />
-      <div className="absolute top-1 -translate-x-1/2 text-[11px] font-semibold text-rose-300 transition-opacity" style={{ left: pct(DROP), opacity: dropped ? 1 : 0.35 }}>price drops</div>
-      <div className="absolute inset-y-2 w-px bg-rose-400/60" style={{ left: pct(DROP) }} />
+      <div className="absolute top-1 -translate-x-1/2 text-[11px] font-semibold text-bear transition-opacity" style={{ left: pct(DROP), opacity: dropped ? 1 : 0.35 }}>price drops</div>
+      <div className="absolute inset-y-2 w-px bg-bear/60" style={{ left: pct(DROP) }} />
       {children}
       <div className="absolute inset-y-0 w-px bg-white/40" style={{ left: pct(t) }} />
     </div>
@@ -124,7 +124,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
       <div className="text-[11px] uppercase tracking-[0.14em] text-dim">{label}</div>
-      <div className="mt-1 font-mono text-[30px] font-medium text-cyan-200">{value}</div>
+      <div className="mt-1 font-mono text-[30px] font-medium text-bull">{value}</div>
       {sub && <div className="mt-0.5 text-[12px] text-dim">{sub}</div>}
     </div>
   );

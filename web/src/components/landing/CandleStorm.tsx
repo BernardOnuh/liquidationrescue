@@ -82,8 +82,8 @@ export function CandleStorm({ className, onPhase, mode = "hero" }: { className?:
       for (let gy = 0; gy <= 8; gy++) { const y = top + (gy / 8) * (bottom - top); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
       // liquidation line
-      ctx.setLineDash([6, 6]); ctx.strokeStyle = "rgba(244,63,94,0.55)"; ctx.beginPath(); ctx.moveTo(0, Y(LIQ)); ctx.lineTo(W, Y(LIQ)); ctx.stroke(); ctx.setLineDash([]);
-      ctx.font = "600 11px 'JetBrains Mono', monospace"; ctx.fillStyle = "rgba(251,113,133,0.85)"; ctx.textAlign = "right";
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = "rgba(255,59,59,0.6)"; ctx.beginPath(); ctx.moveTo(0, Y(LIQ)); ctx.lineTo(W, Y(LIQ)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = "600 11px 'JetBrains Mono', monospace"; ctx.fillStyle = "rgba(255,90,90,0.95)"; ctx.textAlign = "right";
       ctx.fillText("LIQUIDATION · HF 1.00", W - 14, Y(LIQ) + 16);
 
       // candles
@@ -125,17 +125,17 @@ export function CandleStorm({ className, onPhase, mode = "hero" }: { className?:
         const impact = Math.max(0, 1 - Math.abs(t - (hitC.t0 + 0.12)) / 0.5);
         ctx.save();
         // fade the shield's ends so it never runs hard into the page
-        const edge = ctx.createLinearGradient(cx - half, 0, cx + half, 0); edge.addColorStop(0, "rgba(165,243,252,0)"); edge.addColorStop(0.18, "rgba(165,243,252,0.95)"); edge.addColorStop(0.82, "rgba(165,243,252,0.95)"); edge.addColorStop(1, "rgba(165,243,252,0)");
-        const grd = ctx.createLinearGradient(0, ys - 40, 0, ys + 30); grd.addColorStop(0, "rgba(34,211,238,0)"); grd.addColorStop(0.75, `rgba(34,211,238,${0.12 + 0.2 * impact})`); grd.addColorStop(1, "rgba(34,211,238,0)");
+        const edge = ctx.createLinearGradient(cx - half, 0, cx + half, 0); edge.addColorStop(0, "rgba(170,255,214,0)"); edge.addColorStop(0.18, "rgba(170,255,214,0.95)"); edge.addColorStop(0.82, "rgba(170,255,214,0.95)"); edge.addColorStop(1, "rgba(170,255,214,0)");
+        const grd = ctx.createLinearGradient(0, ys - 40, 0, ys + 30); grd.addColorStop(0, "rgba(34,227,154,0)"); grd.addColorStop(0.75, `rgba(34,227,154,${0.12 + 0.2 * impact})`); grd.addColorStop(1, "rgba(34,227,154,0)");
         ctx.fillStyle = grd; ctx.fillRect(cx - half, ys - 40, half * 2, 70);
-        ctx.shadowColor = "#22d3ee"; ctx.shadowBlur = 24 + 30 * impact; ctx.strokeStyle = edge; ctx.lineWidth = 2.5 + 2 * impact;
+        ctx.shadowColor = "#22e39a"; ctx.shadowBlur = 24 + 30 * impact; ctx.strokeStyle = edge; ctx.lineWidth = 2.5 + 2 * impact;
         ctx.beginPath();
         for (let x = cx - half; x <= cx + half; x += 6) { const w = Math.sin(x * 0.045 + tAbs * 6) * (1.5 + 7 * impact * Math.exp(-Math.abs(x - cx) / 90)); x === cx - half ? ctx.moveTo(x, ys + w) : ctx.lineTo(x, ys + w); }
         ctx.stroke();
-        ctx.lineWidth = 1; ctx.strokeStyle = "rgba(103,232,249,0.35)"; ctx.shadowBlur = 0;
+        ctx.lineWidth = 1; ctx.strokeStyle = "rgba(34,227,154,0.35)"; ctx.shadowBlur = 0;
         for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(cx - half, ys + k * 6); ctx.lineTo(cx + half, ys + k * 6); ctx.globalAlpha = 0.5 / k; ctx.stroke(); }
         ctx.globalAlpha = 1; ctx.restore();
-        ctx.font = "600 11px 'JetBrains Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = `rgba(165,243,252,${shieldK})`;
+        ctx.font = "600 11px 'JetBrains Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = `rgba(170,255,214,${shieldK})`;
         ctx.textAlign = "right"; ctx.fillText("RESCUE THRESHOLD · HF 1.24", Math.min(W - 14, cx + half), ys + 22);
         const tk = mode === "calm" ? 1 : Math.min(1, Math.max(0, (t - (hitC.t0 + 0.3)) / 0.5));
         if (tk > 0) {
@@ -148,7 +148,7 @@ export function CandleStorm({ className, onPhase, mode = "hero" }: { className?:
       if (mode === "hero" && !reduced && t >= hitC.t0 + 0.08 && sparked !== Math.floor(tAbs / CYCLE)) {
         sparked = Math.floor(tAbs / CYCLE);
         const hx = xOf(candles.indexOf(hitC));
-        for (let i = 0; i < 90; i++) { const a = Math.PI + Math.random() * Math.PI, v = 80 + Math.random() * 380; sparks.push({ x: hx, y: Y(SHIELD), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.8, life: 0.6 + Math.random() * 0.6, hue: Math.random() < 0.5 ? "255,90,60" : "120,235,255" }); }
+        for (let i = 0; i < 90; i++) { const a = Math.PI + Math.random() * Math.PI, v = 80 + Math.random() * 380; sparks.push({ x: hx, y: Y(SHIELD), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.8, life: 0.6 + Math.random() * 0.6, hue: Math.random() < 0.5 ? "255,90,60" : "170,255,214" }); }
       }
       for (let i = sparks.length - 1; i >= 0; i--) {
         const s = sparks[i]; s.life -= dt; if (s.life <= 0) { sparks.splice(i, 1); continue; }
@@ -165,7 +165,7 @@ export function CandleStorm({ className, onPhase, mode = "hero" }: { className?:
 
       // health factor readout, following the latest candle
       const c = candles[cur]; const k = Math.min(1, Math.max(0, (t - c.t0) / c.dur)); const p = c.o + (c.c - c.o) * k;
-      const hf = hfAt(p); const tone = hf < 1.24 ? "#fb7185" : crashing ? "#fbbf24" : rally ? "#34f0aa" : "#cbd5e1";
+      const hf = hfAt(p); const tone = hf < 1.24 || crashing ? "#ff3b3b" : rally ? "#22e39a" : "#ffffff";
       ctx.textAlign = "left"; ctx.font = "500 11px 'JetBrains Mono', monospace"; ctx.fillStyle = "rgba(203,213,225,0.7)";
       const lx = Math.min(W - 150, xOf(cur) + 18); ctx.fillText("HEALTH FACTOR", lx, Y(p) - 18);
       ctx.font = "600 22px 'JetBrains Mono', monospace"; ctx.fillStyle = tone; ctx.fillText(hf.toFixed(2), lx, Y(p) + 4);

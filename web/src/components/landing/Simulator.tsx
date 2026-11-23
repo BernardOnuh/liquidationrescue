@@ -75,8 +75,8 @@ export function Simulator() {
 
   return (
     <section id="simulate" className="relative overflow-hidden py-32">
-      <div className="pointer-events-none absolute inset-0 transition-opacity duration-700" style={{ opacity: liquidated ? 1 : danger * 0.8, background: "radial-gradient(60% 50% at 50% 50%, rgb(244 63 94 / 0.22), transparent 70%)" }} />
-      <div className={`pointer-events-none absolute left-1/2 top-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-[1400ms] ease-out ${flash === "rescue" ? "scale-100 opacity-100" : "scale-0 opacity-0"}`} style={{ background: "radial-gradient(circle, rgb(34 211 238 / 0.16) 0%, rgb(34 211 238 / 0.06) 35%, transparent 60%)" }} onTransitionEnd={() => flash === "rescue" && setFlash(null)} />
+      <div className="pointer-events-none absolute inset-0 transition-opacity duration-700" style={{ opacity: liquidated ? 1 : danger * 0.8, background: "radial-gradient(60% 50% at 50% 50%, rgb(255 59 59 / 0.22), transparent 70%)" }} />
+      <div className={`pointer-events-none absolute left-1/2 top-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-[1400ms] ease-out ${flash === "rescue" ? "scale-100 opacity-100" : "scale-0 opacity-0"}`} style={{ background: "radial-gradient(circle, rgb(34 227 154 / 0.16) 0%, rgb(34 227 154 / 0.06) 35%, transparent 60%)" }} onTransitionEnd={() => flash === "rescue" && setFlash(null)} />
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <Eyebrow>Interactive rescue</Eyebrow>
         <h2 className="section-title max-w-3xl">Don&apos;t just watch protection. Experience it.</h2>
@@ -87,17 +87,17 @@ export function Simulator() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(PRESETS) as PresetKey[]).map(k => (
-                  <button key={k} onClick={() => { setPreset(k); reset(k); }} className={`rounded-full border px-3.5 py-1.5 text-[12px] font-semibold transition ${preset === k ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-200" : "border-white/10 text-dim hover:text-text"}`}>{PRESETS[k].label}</button>
+                  <button key={k} onClick={() => { setPreset(k); reset(k); }} className={`rounded-full border px-3.5 py-1.5 text-[12px] font-semibold transition ${preset === k ? "border-bull/50 bg-bull/10 text-bull" : "border-white/10 text-dim hover:text-text"}`}>{PRESETS[k].label}</button>
                 ))}
               </div>
-              <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200">Simulation · no transaction sent</span>
+              <span className="rounded-full border border-bear/30 bg-bear/10 px-3 py-1 text-[11px] font-semibold text-bear">Simulation · no transaction sent</span>
             </div>
 
             <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Metric label="WETH price" value={`$${price.toLocaleString("en-US")}`} tone={danger > 0.3 ? "text-orange-300" : ""} />
+              <Metric label="WETH price" value={`$${price.toLocaleString("en-US")}`} tone={danger > 0.3 ? "text-bear" : ""} />
               <Metric label="Collateral value" value={`$${Math.round(pos.collateral * price).toLocaleString("en-US")}`} sub={`${pos.collateral} WETH`} />
               <Metric label="Borrowed" value={`${Math.round(pos.debt).toLocaleString("en-US")} USDC`} />
-              <Metric label="Health factor" value={Number.isFinite(hf) ? hf.toFixed(2) : "∞"} tone={hf < 1 ? "text-rose-400" : hf < TRIGGER ? "text-amber-300" : "text-cyan-300"} />
+              <Metric label="Health factor" value={Number.isFinite(hf) ? hf.toFixed(2) : "∞"} tone={hf < 1 ? "text-bear" : hf < TRIGGER ? "text-bear" : "text-bull"} />
               <Metric label="Rescue threshold" value={`HF ${TRIGGER.toFixed(2)}`} sub={`≈ $${Math.round(triggerPrice).toLocaleString("en-US")} WETH`} />
               <Metric label="Reserve left" value={`${Math.round(reserve).toLocaleString("en-US")} USDC`} sub={`budget ${Math.round(PRESETS[preset].maxSpend - spent).toLocaleString("en-US")} left`} />
             </div>
@@ -110,19 +110,19 @@ export function Simulator() {
             </div>
           </div>
 
-          <div className={`relative overflow-hidden rounded-[32px] border p-6 transition-colors duration-500 sm:p-8 ${liquidated ? "border-rose-500/40 bg-rose-500/[0.06]" : status === "Position protected" ? "border-cyan-300/40 bg-cyan-300/[0.05]" : "border-white/10 bg-white/[0.03]"}`}>
+          <div className={`relative overflow-hidden rounded-[32px] border p-6 transition-colors duration-500 sm:p-8 ${liquidated ? "border-bear/40 bg-bear/[0.06]" : status === "Position protected" ? "border-bull/40 bg-bull/[0.05]" : "border-white/10 bg-white/[0.03]"}`}>
             <div className="flex items-center gap-3">
-              {liquidated ? <ShieldAlert className="h-6 w-6 text-rose-400" /> : <ShieldCheck className={`h-6 w-6 ${status === "Position protected" ? "text-cyan-300" : "text-dim"}`} />}
+              {liquidated ? <ShieldAlert className="h-6 w-6 text-bear" /> : <ShieldCheck className={`h-6 w-6 ${status === "Position protected" ? "text-bull" : "text-dim"}`} />}
               <div className="text-[22px] font-semibold tracking-tight">{status}</div>
             </div>
             {last && (last.outcome === "Rescued" || last.outcome === "PartiallyRescued") && (
               <div className="mt-5 space-y-1.5 font-mono text-[13px]">
-                <div className="text-amber-300">› Threat detected at ${last.price.toLocaleString("en-US")} (HF {last.hfBefore.toFixed(2)})</div>
-                <div className="text-violet-300">› Rescue initiated: repay {last.amount.toFixed(2)} USDC</div>
-                <div className="text-cyan-300">› {last.outcome === "Rescued" ? "Position protected" : "Partly protected: budget or reserve ran out"}: HF {last.hfAfter.toFixed(2)}</div>
+                <div className="text-bear">› Threat detected at ${last.price.toLocaleString("en-US")} (HF {last.hfBefore.toFixed(2)})</div>
+                <div className="text-white">› Rescue initiated: repay {last.amount.toFixed(2)} USDC</div>
+                <div className="text-bull">› {last.outcome === "Rescued" ? "Position protected" : "Partly protected: budget or reserve ran out"}: HF {last.hfAfter.toFixed(2)}</div>
               </div>
             )}
-            {liquidated && <p className="mt-4 text-[14px] leading-relaxed text-rose-200/90">The health factor fell below 1.0 before a rescue could restore it{preset !== "funded" ? ": the reserve wasn't enough" : ""}. On the market, a liquidator now takes the collateral. Protection only works with a funded reserve.</p>}
+            {liquidated && <p className="mt-4 text-[14px] leading-relaxed text-bear/90">The health factor fell below 1.0 before a rescue could restore it{preset !== "funded" ? ": the reserve wasn't enough" : ""}. On the market, a liquidator now takes the collateral. Protection only works with a funded reserve.</p>}
             <div className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-dim">Vault decisions</div>
             <ul className="mt-2 max-h-[230px] space-y-1.5 overflow-auto pr-1">
               {events.length === 0 && <li className="text-[13px] text-dim">No events below the trigger yet. Trigger a crash.</li>}
@@ -135,7 +135,7 @@ export function Simulator() {
                 </li>
               ))}
             </ul>
-            <p className="mt-5 text-[12px] leading-relaxed text-dim">Same formula as <span className="font-mono">ProtectionVault._repayToReach</span>: repay = debt − collateral × price × 0.8 ÷ target, capped by the remaining budget and the reserve. Liquidation at HF &lt; 1, as in the test market. On-chain rescues are shown in the <a href="/app" className="text-cyan-300 underline-offset-2 hover:underline">app</a>.</p>
+            <p className="mt-5 text-[12px] leading-relaxed text-dim">Same formula as <span className="font-mono">ProtectionVault._repayToReach</span>: repay = debt − collateral × price × 0.8 ÷ target, capped by the remaining budget and the reserve. Liquidation at HF &lt; 1, as in the test market. On-chain rescues are shown in the <a href="/app" className="text-bull underline-offset-2 hover:underline">app</a>.</p>
           </div>
         </div>
       </div>
@@ -143,7 +143,7 @@ export function Simulator() {
   );
 }
 
-const OUTCOME_TONE: Record<string, string> = { Rescued: "text-cyan-300", PartiallyRescued: "text-amber-300", BudgetExhausted: "text-orange-300", NoReserve: "text-rose-300", Liquidated: "text-rose-400", NotNeeded: "text-dim", AlreadyLiquidated: "text-rose-400" };
+const OUTCOME_TONE: Record<string, string> = { Rescued: "text-bull", PartiallyRescued: "text-bear", BudgetExhausted: "text-bear", NoReserve: "text-bear", Liquidated: "text-bear", NotNeeded: "text-dim", AlreadyLiquidated: "text-bear" };
 
 function Metric({ label, value, sub, tone = "" }: { label: string; value: string; sub?: string; tone?: string }) {
   return (
@@ -159,7 +159,7 @@ function HFBar({ hf }: { hf: number }) {
   const pct = (v: number) => `${Math.min(100, Math.max(0, ((v - 0.8) / (1.9 - 0.8)) * 100))}%`;
   return (
     <div className="mt-7">
-      <div className="relative h-3 rounded-full bg-[linear-gradient(90deg,#f43f5e_0%,#f59e0b_32%,#22d3ee_70%,#38bdf8_100%)] opacity-90">
+      <div className="relative h-3 rounded-full bg-[linear-gradient(90deg,#ff3b3b_0%,#ff3b3b_32%,#22e39a_70%,#22e39a_100%)] opacity-90">
         {[[1, "liquidation"], [TRIGGER, "trigger"], [TARGET, "target"]].map(([v, l]) => (
           <span key={l as string} className="absolute top-full mt-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-[10px] text-dim" style={{ left: pct(v as number) }}>{(v as number).toFixed(2)} {l}</span>
         ))}
