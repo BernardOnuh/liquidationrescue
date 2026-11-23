@@ -29,13 +29,13 @@ export function Dashboard() {
         {!deployed ? <NotDeployed /> : (
           <>
             <FlowStrip />
+            <div className="mt-6"><PricePanel user={address} /></div>
             <div className="mt-6 grid gap-5 lg:grid-cols-3">
               <div className="space-y-5 lg:col-span-2">
                 <PositionPanel user={address} />
                 <PolicyPanel user={address} />
               </div>
               <div className="space-y-5">
-                <PricePanel user={address} />
                 <WatchPanel />
               </div>
             </div>
@@ -310,17 +310,59 @@ function PolicyPanel({ user }: { user?: Address }) {
   );
 }
 
-function Sparkline({ points }: { points: number[] }) {
-  if (points.length < 2) return <div className="h-20" />;
-  const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
-  const xy = points.map((p, i) => `${(i / (points.length - 1)) * 100},${36 - ((p - min) / span) * 32 - 2}`);
-  const down = points[points.length - 1] < points[0];
-  const c = down ? "var(--color-danger)" : "var(--color-ok)";
+interface PricePoint { price: bigint; at: number; tx: Hex }
+const RESCUED = new Set(["Rescued", "Partially rescued"]);
+
+/** One candle per PriceUpdated event on the oracle: it opens at the previous price and closes at the new one. */
+function PriceCandles({ hist, liqPrice, triggerPrice, decisions }: { hist: PricePoint[]; liqPrice?: number; triggerPrice?: number; decisions: Map<string, string> }) {
+  if (hist.length < 2) return <div className="grid h-56 place-items-center text-[13px] text-dim">Waiting for price events…</div>;
+  const W = 820, H = 250, padR = 76, top = 16, bottom = H - 26;
+  const prices = hist.map(h => price8(h.price));
+  const levels = [liqPrice, triggerPrice].filter((v): v is number => !!v && v > 0);
+  let lo = Math.min(...prices, ...levels), hi = Math.max(...prices, ...levels);
+  const pad = (hi - lo) * 0.08 || hi * 0.05; lo -= pad; hi += pad;
+  const Y = (v: number) => bottom - ((v - lo) / (hi - lo)) * (bottom - top);
+  const step = (W - padR - 12) / Math.max(hist.length, 12), bw = Math.max(4, Math.min(16, step * 0.6));
+  const x = (i: number) => 12 + step * (i + 0.5) + (Math.max(hist.length, 12) - hist.length) * step;
+  const ticks = Array.from({ length: 4 }, (_, k) => lo + ((hi - lo) * (k + 0.5)) / 4);
+  const last = prices[prices.length - 1];
   return (
-    <svg viewBox="0 0 100 36" preserveAspectRatio="none" className="h-20 w-full">
-      <defs><linearGradient id="spark" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={c} stopOpacity="0.35" /><stop offset="1" stopColor={c} stopOpacity="0" /></linearGradient></defs>
-      <polygon points={`0,36 ${xy.join(" ")} 100,36`} fill="url(#spark)" />
-      <polyline points={xy.join(" ")} fill="none" stroke={c} strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full">
+      {ticks.map(v => (
+        <g key={v}><line x1="0" x2={W - padR} y1={Y(v)} y2={Y(v)} stroke="rgb(255 255 255 / 0.05)" />{Math.abs(Y(v) - Y(last)) > 16 && <text x={W - 4} y={Y(v) + 4} textAnchor="end" fill="#6b7280" fontSize="11" fontFamily="JetBrains Mono, monospace">{fmtUsd(v)}</text>}</g>
+      ))}
+      {liqPrice && liqPrice > 0 && (
+        <g>
+          <rect x="0" y={Y(liqPrice)} width={W - padR} height={Math.max(0, bottom - Y(liqPrice))} fill="rgb(255 59 59 / 0.07)" />
+          <line x1="0" x2={W - padR} y1={Y(liqPrice)} y2={Y(liqPrice)} stroke="#ff3b3b" strokeDasharray="6 5" />
+          <text x="8" y={Y(liqPrice) - 6} fill="#ff3b3b" fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">YOUR LIQUIDATION · {fmtUsd(liqPrice)}</text>
+        </g>
+      )}
+      {triggerPrice && triggerPrice > 0 && (
+        <g>
+          <line x1="0" x2={W - padR} y1={Y(triggerPrice)} y2={Y(triggerPrice)} stroke="#22e39a" strokeDasharray="3 5" />
+          <text x="8" y={Y(triggerPrice) - 6} fill="#22e39a" fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">RESCUE TRIGGER · {fmtUsd(triggerPrice)}</text>
+        </g>
+      )}
+      {hist.map((h, i) => {
+        const c = prices[i], o = i > 0 ? prices[i - 1] : c, up = c >= o, col = up ? "#22e39a" : "#ff3b3b";
+        const y1 = Y(Math.max(o, c)), y2 = Y(Math.min(o, c)), d = decisions.get(h.tx.toLowerCase());
+        return (
+          <g key={h.tx}>
+            <title>{`${fmtUsd(o)} → ${fmtUsd(c)} · ${ago(h.at)}${d ? ` · vault: ${d}` : ""}`}</title>
+            <line x1={x(i)} x2={x(i)} y1={y1 - 3} y2={y2 + 3} stroke={col} strokeWidth="1.2" />
+            <rect x={x(i) - bw / 2} y={y1} width={bw} height={Math.max(2, y2 - y1)} rx="1.5" fill={col} opacity={i === hist.length - 1 ? 1 : 0.85} />
+            {d && (RESCUED.has(d)
+              ? <g><path d={`M${x(i)} ${y2 + 10} l5 8 h-10 z`} fill="#22e39a" /><circle cx={x(i)} cy={y2 + 14} r="9" fill="none" stroke="#22e39a" strokeOpacity="0.35" /></g>
+              : <path d={`M${x(i) - 4} ${y2 + 10} l8 8 M${x(i) + 4} ${y2 + 10} l-8 8`} stroke="#ff8080" strokeWidth="1.6" />)}
+          </g>
+        );
+      })}
+      <g transform={`translate(0 ${Y(last)})`}>
+        <line x1={x(hist.length - 1) + bw} x2={W - padR} stroke="rgb(255 255 255 / 0.4)" strokeDasharray="2 4" />
+        <rect x={W - padR + 4} y="-10" width={padR - 6} height="20" rx="5" fill={prices.at(-1)! < prices.at(-2)! ? "#ff3b3b" : "#22e39a"} />
+        <text x={W - padR / 2 + 1} y="4" textAnchor="middle" fill="#05070c" fontSize="11" fontWeight="700" fontFamily="JetBrains Mono, monospace">{fmtUsd(last)}</text>
+      </g>
     </svg>
   );
 }
@@ -328,6 +370,8 @@ function Sparkline({ points }: { points: number[] }) {
 function PricePanel({ user }: { user?: Address }) {
   const { data: m } = useMarket();
   const { data: hist } = usePriceHistory();
+  const { data: log } = useRescueLog();
+  const { data: a } = useAccountState(user);
   const { writeContractAsync } = useWriteContract();
   const tx = useTxRunner();
   if (!m) return null;
@@ -337,24 +381,45 @@ function PricePanel({ user }: { user?: Address }) {
     const next = (m.price * BigInt(100 + pct)) / 100n;
     return tx.run([{ label: `Publish WETH ${fmtUsd(price8(next))}`, send: () => writeContractAsync({ address: dep.oracle!, abi: MockPriceOracleAbi, functionName: "setPrice", args: [dep.weth!, next] }) }]);
   };
+  // Your levels, from your position and policy on chain.
+  const collateral = a ? Number(formatEther(a.collateral)) : 0, debt = a ? usdc(a.debt) : 0;
+  const liqPrice = collateral > 0 && debt > 0 ? debt / (collateral * LT) : undefined;
+  const triggerPrice = liqPrice && a?.policy.active ? hfNum(a.policy.triggerHF) * liqPrice : undefined;
+  // The vault's decisions, matched to the price event that caused them (yours when connected, everyone's otherwise).
+  const decisions = new Map<string, string>();
+  for (const r of log?.rows ?? []) if (r.originTx && (!user || r.user.toLowerCase() === user.toLowerCase())) decisions.set(r.originTx.toLowerCase(), r.outcome);
+  const points = (hist ?? []) as PricePoint[];
+  const first = points.length ? price8(points[0].price) : price, change = first ? ((price - first) / first) * 100 : 0;
   return (
-    <Panel title="WETH price feed" icon={<Activity className="h-4 w-4 text-rescue" />} right={<span className="text-[11px] text-dim">{ago(m.updatedAt)}</span>}>
-      <div className="flex items-end justify-between">
-        <div className="text-3xl font-extrabold tabular-nums">{fmtUsd(price)}</div>
-        {m.reactiveLastPrice > 0n && <div className="text-right text-[11px] text-dim">Reactive last saw<br /><span className="font-mono text-reactive">{fmtUsd(price8(m.reactiveLastPrice))}</span></div>}
-      </div>
-      <Sparkline points={(hist ?? []).map(h => price8(h.price))} />
-      {isOperator ? (
-        <div>
-          <div className="eyebrow mb-2">Publish a price (test feed operator)</div>
-          <div className="grid grid-cols-4 gap-2">
-            {[-5, -10, -20, 10].map(p => <button key={p} className={p < 0 ? "btn-ghost !px-2 text-rescue" : "btn-ghost !px-2 text-ok"} disabled={tx.busy} onClick={() => move(p)}>{p > 0 ? "+" : ""}{p}%</button>)}
+    <Panel title="WETH price feed" icon={<Activity className="h-4 w-4 text-ok" />} right={<span className="font-mono text-[11px] text-dim">{points.length} price events · updated {ago(m.updatedAt)}</span>}>
+      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+        <div className="flex flex-col">
+          <div className="font-mono text-[34px] font-semibold tabular-nums text-white">{fmtUsd(price)}</div>
+          <div className={`font-mono text-[13px] ${change < 0 ? "text-danger" : "text-ok"}`}>{change < 0 ? "▼" : "▲"} {Math.abs(change).toFixed(2)}% over {points.length} events</div>
+          {m.reactiveLastPrice > 0n && <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-[12px] text-dim">Reactive last saw <span className="font-mono text-white">{fmtUsd(price8(m.reactiveLastPrice))}</span></div>}
+          <div className="mt-4 space-y-1.5 text-[12px] text-dim">
+            <div className="flex items-center gap-2"><span className="inline-block h-0 w-5 border-t border-dashed border-danger" />Your liquidation price{liqPrice ? "" : " (open a position)"}</div>
+            <div className="flex items-center gap-2"><span className="inline-block h-0 w-5 border-t border-dashed border-ok" />Your rescue trigger{triggerPrice ? "" : " (set a policy)"}</div>
+            <div className="flex items-center gap-2"><span className="text-ok">▲</span>Vault rescued · <span className="text-warn">✕</span> vault refused</div>
           </div>
-          <TxStatus state={tx.state} />
+          <div className="mt-auto pt-5">
+            {isOperator ? (
+              <div>
+                <div className="eyebrow mb-2">Publish a price (test feed operator)</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[-5, -10, -20, 10].map(p => <button key={p} className={p < 0 ? "btn-ghost !px-2 text-danger" : "btn-ghost !px-2 text-ok"} disabled={tx.busy} onClick={() => move(p)}>{p > 0 ? "+" : ""}{p}%</button>)}
+                </div>
+                <TxStatus state={tx.state} />
+              </div>
+            ) : (
+              <p className="text-[12px] leading-relaxed text-dim">Each candle is one PriceUpdated event on the oracle: the event Reactive Network listens for. Prices on this test feed are published by its operator{isLocal ? " (the “Price feed operator” local account)" : ""}.</p>
+            )}
+          </div>
         </div>
-      ) : (
-        <p className="text-[12px] text-dim">Prices on this test feed are published by its operator{isLocal ? " (the “Price feed operator” local account)" : ""}. Each update is the event Reactive Network listens for.</p>
-      )}
+        <div className="rounded-2xl border border-white/[0.07] bg-black/30 p-3">
+          <PriceCandles hist={points} liqPrice={liqPrice} triggerPrice={triggerPrice} decisions={decisions} />
+        </div>
+      </div>
     </Panel>
   );
 }
